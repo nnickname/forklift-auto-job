@@ -288,10 +288,8 @@ namespace Sender {
             rpcOk = SendEnterCheckpoint();
         }
         
-        // Optional: clear state after send? Usually standard game logic clears it upon exit.
-        // We'll leave it for now or maybe clear it? 
-        // If we leave it, game might think we are still in CP.
-        // But let's leave it as is, standard behavior.
+        // Fix: Reset state immediately to prevent camera bugs during server-side spectate/freeze
+        SAMP::SetInCheckpoint(false);
         
         return syncOk && rpcOk;
     }

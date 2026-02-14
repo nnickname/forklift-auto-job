@@ -43,6 +43,13 @@ extern "C" void ProcessRPC(int rpcId, RPCParameters* params) {
     else if (rpcId == RPC_DisablePlayerCheckpoint) {
         OutputDebugStringA("[SAMP-MOD] Received DisablePlayerCheckpoint RPC!");
     }
+    else if (rpcId == 124) { // RPC_TogglePlayerSpectating
+        OutputDebugStringA("[SAMP-MOD] Received TogglePlayerSpectating RPC! (Ignoring?)");
+        // To block this, you would need to NOT jump back to the original handler or 
+        // modify the return address to skip the call. 
+        // Currently this hook (as written in assembly below) executes the original code 
+        // after this function returns. So this is just a logger.
+    }
 }
 
 // Naked hook function
