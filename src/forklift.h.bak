@@ -1,0 +1,305 @@
+#pragma once
+
+#include <windows.h>
+#include <cmath>
+#include <stdio.h>
+#include "game.h"
+#include "samp.h"
+#include "raknet_sender.h"
+
+namespace Forklift {
+
+    // ============================================================
+    // State Machine
+    // ============================================================
+    enum class State {
+        IDLE,                   // Esperando que empiece el job
+        WAITING_CHECKPOINT,     // Buscando checkpoint de recogida
+        TELEPORTING_PICKUP,     // Haciendo TPs hacia el checkpoint
+        WAITING_PICKUP,         // Esperando en el punto de recogida
+        WAITING_RACE_CP,       // Buscando checkpoint de entrega
+        TELEPORTING_DELIVERY,   // Haciendo TPs hacia la entrega
+        WAITING_DELIVERY,       // Esperando en el punto de entrega
+    };
+
+    // ============================================================
+    // Configuration - EDITA ESTOS VALORES
+    // ============================================================
+    struct Config {
+        // --- TP POR SALTOS ---
+        float stepDistance      = 35.0f;  // Coordenadas por salto (más = menos saltos)
+        DWORD stepDelayMs      = 400;    // Milisegundos entre cada salto
+        
+        // --- ESPERAS EN CHECKPOINT ---
+        DWORD pickupWaitMs     = 5000;   // Espera en recogida (ms)
+        DWORD deliveryWaitMs   = 5000;   // Espera en entrega (ms)
+        DWORD waitRandomMs     = 800;    // Variación random ±ms en esperas
+        
+        // --- MISC ---
+        float teleportZOffset  = 0.5f;   // Offset Z para no clipear el suelo
+        float arrivalThreshold = 3.0f;   // Distancia para considerar "llegó"
+        
+        // --- FILTRO VEHÍCULO ---
+        WORD  forkliftModelId  = 530;    // Model ID del forklift
+        bool  checkVehicleModel = false; // Solo funcionar en forklift
+    };
+
+    // ============================================================
+    // Internal state
+    // ============================================================
+    static State      s_State = State::IDLE;
+    static DWORD      s_WaitStart = 0;
+    static Config     s_Config;
+    static Game::Vec3 s_TargetPos = {0, 0, 0};
+    static int        s_CycleCount = 0;
+    
+    // TP por saltos state
+    static DWORD      s_LastStepTime = 0;       // Timestamp del último salto
+    static DWORD      s_ActualWaitMs = 0;       // Tiempo de espera randomizado
+    static int        s_StepCount = 0;          // Contador de saltos en este viaje
+
+    // ============================================================
+    // Simple random
+    // ============================================================
+    static DWORD s_RandSeed = 0;
+    static float RandomFloat(float minVal, float maxVal) {
+        if (s_RandSeed == 0) s_RandSeed = GetTickCount();
+        s_RandSeed = s_RandSeed * 214013 + 2531011;
+        DWORD r = (s_RandSeed >> 16) & 0x7FFF;
+        float t = (float)r / 32767.0f;
+        return minVal + t * (maxVal - minVal);
+    }
+
+    // ============================================================
+    // Reset
+    // ============================================================
+    inline void Reset() {
+        s_State = State::IDLE;
+        s_WaitStart = 0;
+        s_CycleCount = 0;
+        s_LastStepTime = 0;
+        s_StepCount = 0;
+    }
+
+    // ============================================================
+    // Normalizar vector
+    // ============================================================
+    static Game::Vec3 Normalize(Game::Vec3 v) {
+        float len = sqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+        if (len < 0.0001f) return {0, 0, 0};
+        return { v.x / len, v.y / len, v.z / len };
+    }
+
+    // ============================================================
+    // Calcular wait time con variación random
+    // ============================================================
+    static DWORD CalcWaitTime(DWORD baseMs) {
+        float variation = RandomFloat(-(float)s_Config.waitRandomMs, (float)s_Config.waitRandomMs);
+        int result = (int)baseMs + (int)variation;
+        if (result < 500) result = 500;
+        return (DWORD)result;
+    }
+
+    // ============================================================
+    // TP POR SALTOS - DEPRECATED / REMOVED
+    // ============================================================
+    /*
+    static bool DoStepTP(Game::Vec3 target) {
+        // ... (removed for RakNet Sync method)
+        return true;
+    }
+    */
+
+    // ============================================================
+    // Log al chat
+    // ============================================================
+    static void LogState(const char* action) {
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer), "[Forklift] Ciclo #%d - %s", s_CycleCount, action);
+        Game::AddChatMessage(0xFF00BFFF, buffer);
+    }
+
+    // ============================================================
+    // External Update (Called from RakNetHook or other source)
+    // ============================================================
+    static void OnCheckpointUpdate(bool active, Game::Vec3 pos) {
+        if (!active) return;
+        
+        // Reset wait timers if we get a new CP while waiting
+        // This makes the bot react instantly if the server sends the next CP
+        
+        if (s_State == State::WAITING_CHECKPOINT) {
+             s_TargetPos = pos;
+             // State transition handled in Update() to sync with thread
+        } 
+        else if (s_State == State::WAITING_RACE_CP || s_State == State::WAITING_PICKUP) {
+             // If we were waiting for pickup but got a new CP, assume pickup finished!
+             s_TargetPos = pos;
+             s_State = State::WAITING_RACE_CP; // Will transition to TELEPORTING in next Update
+        }
+        else if (s_State == State::WAITING_DELIVERY) {
+             // If we were waiting for delivery but got a new CP, assume job done!
+             s_TargetPos = pos;
+             s_State = State::WAITING_CHECKPOINT; // Next cycle
+        }
+    }
+
+    // ============================================================
+    // Main Update - se llama cada tick cuando el mod está activo
+    // ============================================================
+    inline void Update() {
+        DWORD now = GetTickCount();
+        
+        // Filtro de vehículo (opcional)
+        if (s_Config.checkVehicleModel) {
+            WORD model = Game::GetVehicleModelId();
+            if (model != s_Config.forkliftModelId) return;
+        }
+        
+        switch (s_State) {
+            // ---------------------------------------------------------
+            case State::IDLE:
+            {
+                s_State = State::WAITING_CHECKPOINT;
+                s_CycleCount++;
+                LogState("Buscando checkpoint de recogida...");
+                break;
+            }
+            
+            // ---------------------------------------------------------
+            case State::WAITING_CHECKPOINT:
+            {
+                // Prioritize RakNet hook data (set via OnCheckpointUpdate)
+                // If s_TargetPos is already valid and non-zero (set by hook), use it and skip memory read
+                if (s_TargetPos.x != 0.0f || s_TargetPos.y != 0.0f) {
+                     // Checkpoint was received via RPC!
+                     s_State = State::TELEPORTING_PICKUP;
+                     LogState("Checkpoint RPC usado. Enviando Fake Sync...");
+                }
+                // Fallback to memory reading if RakNet hook didn't fire (legacy)
+                else if (Game::IsCheckpointActive()) {
+                    s_TargetPos = Game::GetCheckpointPosition();
+                    // Sanity check coordinates
+                    if (abs(s_TargetPos.x) > 20000.0f || abs(s_TargetPos.y) > 20000.0f) {
+                         // Ignore garbage memory READ
+                         // LogState("Ignorando lectura de memoria corrupta (CP)");
+                         break;
+                    }
+
+                    s_State = State::TELEPORTING_PICKUP;
+                    char buf[128];
+                    snprintf(buf, sizeof(buf), "CP (Memoria) encontrado! Sync a %.1f,%.1f", s_TargetPos.x, s_TargetPos.y);
+                    LogState(buf);
+                }
+                break;
+            }
+            
+            // ---------------------------------------------------------
+            case State::TELEPORTING_PICKUP:
+            {
+                WORD vehID = SAMP::GetVehicleID();
+                if (vehID != 0xFFFF) {
+                    // Send Fake Sync (FakeEnterCheckpoint)
+                    Sender::SendFakeEnterCheckpoint(vehID, s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
+                    
+                    s_State = State::WAITING_PICKUP;
+                    s_WaitStart = now;
+                    s_ActualWaitMs = CalcWaitTime(s_Config.pickupWaitMs);
+                    
+                    char buf[128];
+                    snprintf(buf, sizeof(buf), "FakeEnterCheckpoint enviado! Esperando %dms...", s_ActualWaitMs);
+                    LogState(buf);
+                } else {
+                     // If we can't get vehicle ID, we can't send sync. Retry next tick or reset?
+                     // Verify if we are actually in vehicle
+                     if (!Game::IsPlayerInVehicle()) {
+                         s_State = State::IDLE;
+                         LogState("Error: No en vehiculo. Reset.");
+                     }
+                }
+                break;
+            }
+            
+            // ---------------------------------------------------------
+            case State::WAITING_PICKUP:
+            {
+                if (now - s_WaitStart >= s_ActualWaitMs) {
+                    s_State = State::WAITING_RACE_CP;
+                    LogState("Buscando checkpoint de entrega...");
+                }
+                break;
+            }
+            
+            // ---------------------------------------------------------
+            case State::WAITING_RACE_CP:
+            {
+                if (s_TargetPos.x != 0.0f || s_TargetPos.y != 0.0f) {
+                    // Checkpoint was received via RPC!
+                    s_State = State::TELEPORTING_DELIVERY;
+                    LogState("RaceCP RPC usado. Enviando Fake Sync...");
+                }
+                else if (Game::IsRaceCheckpointActive()) {
+                    s_TargetPos = Game::GetRaceCheckpointPosition();
+                     if (abs(s_TargetPos.x) > 20000.0f) break; 
+                    s_State = State::TELEPORTING_DELIVERY;
+                    LogState("Race CP (Memoria) encontrado!");
+                }
+                else if (Game::IsCheckpointActive()) {
+                     s_TargetPos = Game::GetCheckpointPosition();
+                     if (abs(s_TargetPos.x) > 20000.0f) break;
+                     s_State = State::TELEPORTING_DELIVERY;
+                     LogState("CP (Memoria - Entrega) encontrado!");
+                }
+                break;
+            }
+            
+            // ---------------------------------------------------------
+            case State::TELEPORTING_DELIVERY:
+            {
+                // Safety check for absurd coordinates (e.g. invalid memory read)
+                if (abs(s_TargetPos.x) > 20000.0f || abs(s_TargetPos.y) > 20000.0f) {
+                     LogState("Error: Coordenadas de Pickup invalidas! Abortando.");
+                     s_State = State::IDLE;
+                     break;
+                }
+
+                WORD vehID = SAMP::GetVehicleID();
+                if (vehID != 0xFFFF) {
+                    // Send Fake Sync (FakeEnterCheckpoint)
+                    Sender::SendFakeEnterCheckpoint(vehID, s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
+                    
+                    s_State = State::WAITING_DELIVERY;
+                    s_WaitStart = now;
+                    s_ActualWaitMs = CalcWaitTime(s_Config.deliveryWaitMs);
+                    
+                    char buf[128];
+                    snprintf(buf, sizeof(buf), "FakeEnterCheckpoint (Entrega) enviado! Esperando %dms...", s_ActualWaitMs);
+                    LogState(buf);
+                } else {
+                     LogState("Error: No se pudo obtener VehicleID. Resetting.");
+                     s_State = State::IDLE;
+                }
+                break;
+            }
+            
+            // ---------------------------------------------------------
+            case State::WAITING_DELIVERY:
+            {
+                if (now - s_WaitStart >= s_ActualWaitMs) {
+                    char buf[128];
+                    snprintf(buf, sizeof(buf), "Ciclo #%d completado!", s_CycleCount);
+                    LogState(buf);
+                    s_State = State::IDLE;
+                }
+                break;
+            }
+        }
+    }
+    
+    // ============================================================
+    // Getters
+    // ============================================================
+    inline Config& GetConfig() { return s_Config; }
+    inline State GetState() { return s_State; }
+    inline int GetCycleCount() { return s_CycleCount; }
+}

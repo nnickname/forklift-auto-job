@@ -5,8 +5,11 @@
 
 namespace Game {
     void AddChatMessage(DWORD color, const char* text) {
-        // Log to file only - SA-MP function calls disabled (wrong offsets crash)
         Log("[CHAT] %s", text);
+        // Also try SA-MP chat (may fail if offsets wrong, but SEH protects)
+        __try {
+            SAMP::AddChatMessage(color, text);
+        } __except(EXCEPTION_EXECUTE_HANDLER) {}
     }
 
     void Log(const char* fmt, ...) {
@@ -16,8 +19,8 @@ namespace Game {
         vsnprintf(buffer, sizeof(buffer), fmt, args);
         va_end(args);
 
-        HANDLE hFile = CreateFileA("forklift_debug.log", 
-            FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS, 
+        HANDLE hFile = CreateFileA("forklift_debug.log",
+            FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS,
             FILE_ATTRIBUTE_NORMAL, NULL);
         if (hFile != INVALID_HANDLE_VALUE) {
             DWORD written;

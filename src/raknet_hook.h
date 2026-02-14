@@ -1,146 +1,63 @@
 #pragma once
 /**
- * RakNet Hooking for SA-MP 0.3.DL
- * Intercepts incoming RPCs (Remote Procedure Calls) to detect Checkpoints immediately.
+ * RakNet Hook - Monitors SA-MP checkpoint state
+ * 
+ * Instead of hooking the actual RPC dispatcher (risky, version-specific),
+ * this polls the CGame checkpoint state each tick and pushes updates
+ * to the Forklift module.
  */
 
 #include <windows.h>
 #include "samp.h"
+#include "game.h"
 #include "forklift.h"
 
 namespace RakNetHook {
 
-    // ============================================================
-    // RakNet Structures
-    // ============================================================
-    #pragma pack(push, 1)
-    struct stRakNetParams {
-        char*     input;          // BitStream data
-        DWORD     numberOfBitsOfData;
-        DWORD     pSender;
-    };
-    #pragma pack(pop)
+    // Cached checkpoint state to avoid spamming updates
+    static bool  s_LastCPActive = false;
+    static float s_LastCPX = 0, s_LastCPY = 0, s_LastCPZ = 0;
+    static bool  s_LastRCPActive = false;
+    static float s_LastRCPX = 0, s_LastRCPY = 0, s_LastRCPZ = 0;
 
-    // RPC IDs
-    constexpr int RPC_SetPlayerCheckpoint = 107;
-    constexpr int RPC_SetPlayerRaceCheckpoint = 38;
-    constexpr int RPC_DisablePlayerCheckpoint = 37;
-    constexpr int RPC_DisablePlayerRaceCheckpoint = 39;
-
-    // Hook globals
-    static bool g_HookInstalled = false;
-    static DWORD g_OriginalHandler = 0;
-
-    // BitStream reading helper (Simplified)
-    class BitStream {
-    public:
-        unsigned char* data;
-        int lengthInBits;
-        int currentReadBit;
-
-        BitStream(char* _data, int _lengthInBits) {
-            data = (unsigned char*)_data;
-            lengthInBits = _lengthInBits;
-            currentReadBit = 0;
-        }
-
-        template <typename T>
-        void Read(T& out) {
-            if (currentReadBit + sizeof(T)*8 > lengthInBits) return;
-            // Simplified byte-aligned read (works for standard types usually)
-            // Note: RakNet is NOT always byte-aligned, but RPCs usually start aligned
-            memcpy(&out, data + (currentReadBit / 8), sizeof(T));
-            currentReadBit += sizeof(T) * 8;
-        }
-        
-        // Skip bits (padding)
-        void IgnoreBits(int numberOfBits) {
-            currentReadBit += numberOfBits;
-        }
-    };
-
-    // ============================================================
-    // The Hook Logic
-    // ============================================================
-    
-    // We update our internal state based on the packet
-    void ProcessRPC(int rpcId, char* data, int bits) {
-        Game::Log("[RakNet] Received RPC ID: %d (Bits: %d)", rpcId, bits);
-
-        if (rpcId == RPC_SetPlayerCheckpoint) {
-            BitStream bs(data, bits);
-            float x, y, z, size;
-            bs.Read(x);
-            bs.Read(y);
-            bs.Read(z);
-            bs.Read(size);
-            
-            Game::Log("[RakNet] SetCheckpoint: (%.2f, %.2f, %.2f) Size: %.2f", x, y, z, size);
-            
-            // Force update our forklift state immediately
-            Forklift::OnCheckpointUpdate(true, {x, y, z});
-        }
-        else if (rpcId == RPC_SetPlayerRaceCheckpoint) {
-            BitStream bs(data, bits);
-            BYTE type;
-            float x, y, z, nextX, nextY, nextZ, size;
-            
-            bs.Read(type);
-            bs.Read(x);
-            bs.Read(y);
-            bs.Read(z);
-            bs.Read(nextX);
-            bs.Read(nextY);
-            bs.Read(nextZ);
-            bs.Read(size);
-
-            Game::Log("[RakNet] SetRaceCheckpoint: (%.2f, %.2f, %.2f) Type: %d", x, y, z, type);
-            
-            // Force update our forklift state immediately
-            Forklift::OnCheckpointUpdate(true, {x, y, z});
-        }
-        else if (rpcId == RPC_DisablePlayerCheckpoint || rpcId == RPC_DisablePlayerRaceCheckpoint) {
-            Game::Log("[RakNet] DisableCheckpoint");
-            Forklift::OnCheckpointUpdate(false, {0, 0, 0});
-        }
-    }
-
-    // ============================================================
-    // Hook installation
-    // For simplicity/safety, instead of a raw ASM hook on the dispatcher,
-    // we will monitor the internal SA-MP Checkpoint Structs which is safer.
-    // Raw RakNet hooking requires complex BitStream implementation which crashes easily if wrong.
-    // ============================================================
-    
-    // Called from Main Loop
+    // Called from main loop (every tick)
     inline void Update() {
-        bool active = false;
-        Game::Vec3 pos = {0,0,0};
+        if (!SAMP::IsInitialized()) return;
 
-        // Priority 1: Checkpoint
-        if (SAMP::IsInitialized()) {
-             stCheckpoint* cp = SAMP::GetCurrentCheckpoint();
-             if (cp && cp->bActive) {
-                 active = true;
-                 pos.x = cp->fX;
-                 pos.y = cp->fY;
-                 pos.z = cp->fZ;
-             }
-             else {
-                 stRaceCheckpoint* rcp = SAMP::GetRaceCheckpoint();
-                 if (rcp && rcp->bActive) {
-                     active = true;
-                     pos.x = rcp->fX;
-                     pos.y = rcp->fY;
-                     pos.z = rcp->fZ;
-                 }
-             }
+        bool cpActive = false;
+        Game::Vec3 cpPos = {0, 0, 0};
+
+        // Check normal checkpoint
+        stCheckpoint* pCP = SAMP::GetCurrentCheckpoint();
+        if (pCP && pCP->bEnabled) {
+            cpActive = true;
+            cpPos = { pCP->fX, pCP->fY, pCP->fZ };
         }
-        
-        // Push to forklift logic
-        if (active) {
-            // Only update if changed or unitialized to avoid spamming logs (logic handled in Forklift)
-            Forklift::OnCheckpointUpdate(true, pos);
+
+        // Check race checkpoint if no normal CP
+        if (!cpActive) {
+            stRaceCheckpoint* pRCP = SAMP::GetRaceCheckpoint();
+            if (pRCP && pRCP->bEnabled) {
+                cpActive = true;
+                cpPos = { pRCP->fX, pRCP->fY, pRCP->fZ };
+            }
+        }
+
+        // Only push update if state changed or position changed
+        if (cpActive) {
+            bool posChanged = (cpPos.x != s_LastCPX || cpPos.y != s_LastCPY || cpPos.z != s_LastCPZ);
+            bool stateChanged = !s_LastCPActive;
+            
+            if (stateChanged || posChanged) {
+                s_LastCPActive = true;
+                s_LastCPX = cpPos.x;
+                s_LastCPY = cpPos.y;
+                s_LastCPZ = cpPos.z;
+                Forklift::OnCheckpointUpdate(true, cpPos);
+            }
+        } else if (s_LastCPActive) {
+            s_LastCPActive = false;
+            s_LastCPX = s_LastCPY = s_LastCPZ = 0;
         }
     }
 }
