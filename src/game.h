@@ -65,7 +65,7 @@ namespace Game {
      */
     inline DWORD GetPlayerPed() {
         DWORD* pPed = (DWORD*)GameAddr::PLAYER_PED_PTR;
-        if (!pPed) return 0;
+        if (!pPed || IsBadReadPtr(pPed, 4)) return 0;
         return *pPed;
     }
     
@@ -74,7 +74,7 @@ namespace Game {
      */
     inline bool IsPlayerInVehicle() {
         DWORD ped = GetPlayerPed();
-        if (!ped) return false;
+        if (!ped || IsBadReadPtr((void*)ped, 0x600)) return false; // Basic validation
         
         DWORD vehicle = *(DWORD*)(ped + GameAddr::VEHICLE_PTR_OFFSET);
         return vehicle != 0;
@@ -85,7 +85,7 @@ namespace Game {
      */
     inline DWORD GetPlayerVehicle() {
         DWORD ped = GetPlayerPed();
-        if (!ped) return 0;
+        if (!ped || IsBadReadPtr((void*)ped, 0x600)) return 0;
         return *(DWORD*)(ped + GameAddr::VEHICLE_PTR_OFFSET);
     }
     

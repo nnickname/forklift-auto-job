@@ -195,6 +195,30 @@ namespace Forklift {
     }
 
     // ============================================================
+    // External Update (Called from RakNetHook or other source)
+    // ============================================================
+    static void OnCheckpointUpdate(bool active, Game::Vec3 pos) {
+        if (!active) return;
+        
+        // Override state if we are waiting/searching
+        if (s_State == State::WAITING_CHECKPOINT || s_State == State::WAITING_RACE_CP) {
+             s_TargetPos = pos;
+             
+             // Decide next state based on current logic flow
+             // Simplification: if searching for pickup -> go pickup. If searching delivery -> go delivery.
+             // Since we don't know "which" CP this is just by coords, we assume flow order.
+             
+             if (s_State == State::WAITING_CHECKPOINT) {
+                 s_State = State::TELEPORTING_PICKUP;
+                 LogState("RakNet: Checkpoint recibido -> Pickup");
+             } else {
+                 s_State = State::TELEPORTING_DELIVERY;
+                 LogState("RakNet: Checkpoint recibido -> Delivery");
+             }
+        }
+    }
+
+    // ============================================================
     // Main Update - se llama cada tick cuando el mod está activo
     // ============================================================
     inline void Update() {
