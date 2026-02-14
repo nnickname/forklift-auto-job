@@ -7,6 +7,8 @@
  */
 
 #include <windows.h>
+#include <vector>
+#include <string>
 
 // ============================================================
 // SA-MP Base Addresses
@@ -26,6 +28,7 @@ namespace SAMPOffsets {
     constexpr DWORD SAMP_INFO_OFFSET         = 0x2ACA24;  // pSAMP pointer
     constexpr DWORD SAMP_CHAT_INFO_OFFSET    = 0x2ACA10;  // pChat pointer
     constexpr DWORD SAMP_CHAT_INPUT_OFFSET   = 0x2ACA14;  // pInput pointer
+    constexpr DWORD SAMP_CHECKPOINTS_OFFSET  = 0x2ACA3C;  // pCheckpoints pointer (Local Player)
     
     // Game states
     constexpr int GAMESTATE_WAIT_CONNECT    = 1;
@@ -37,6 +40,9 @@ namespace SAMPOffsets {
     constexpr DWORD FUNC_ADDCHATMESSAGE     = 0x64520;
     constexpr DWORD FUNC_SENDCMD            = 0x65C60;
     constexpr DWORD FUNC_SAY                = 0x57F0;
+    
+    // Checkpoint Manager (0.3.DL R1)
+    constexpr DWORD SAMP_CHECKPOINT_MGR     = 0x2ACA3C;
 }
 
 // ============================================================
@@ -47,13 +53,8 @@ namespace SAMPOffsets {
 struct stSAMPInfo {
     char pad_0[0x3CD];
     int  iGameState;
-    // ... more fields
-};
-
-struct stPlayerPool {
-    // Local player info
-    DWORD pLocalPlayer;  // stLocalPlayer*
-    // ... 
+    char pad_1[0x1D - sizeof(int)]; // Padding to 0x3DE
+    DWORD pPools;
 };
 
 struct stLocalPlayer {
@@ -62,7 +63,23 @@ struct stLocalPlayer {
     char pad_1[0x2];
     int   iIsActive;
     int   iIsWasted;
-    // ... simplified
+};
+
+struct stPlayerPool {
+    DWORD ulMaxPlayerID;
+    DWORD ulLocalPlayerID;
+    void* pLocalPlayer; // stLocalPlayer*, offset 0x8
+};
+
+struct stPools {
+    void* pActorPool;
+    void* pObjectPool;
+    void* pGangzonePool;
+    void* pLabelPool;
+    void* pTextdrawPool;
+    void* pMenuPool;
+    stPlayerPool* pPlayerPool; // 0x18
+    void* pVehiclePool;
 };
 
 struct stCheckpoint {
@@ -76,8 +93,13 @@ struct stRaceCheckpoint {
     float fNextX, fNextY, fNextZ; // Next CP direction
     float fSize;
     BYTE  bType;             // 0-8 types
+    char  pad_0[3];          // Alignment
     BOOL  bActive;
-    // padding
+};
+
+struct stSAMPCheckpoints {
+    stRaceCheckpoint raceCheckpoint;
+    stCheckpoint     normalCheckpoint;
 };
 
 #pragma pack(pop)
@@ -87,15 +109,83 @@ struct stRaceCheckpoint {
 // ============================================================
 namespace SAMP {
     
+    // Helper to safely read memory
+    template <typename T>
+    inline bool SafeRead(void* ptr, T& outResult) {
+        if (!ptr) return false;
+        __try {
+            // Check if readable first to avoid overhead if obviously bad
+            if (IsBadReadPtr(ptr, sizeof(T))) return false;
+            outResult = *(T*)ptr;
+            return true;
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
+    }
+
+    // Overload for DWORD addresses for convenience
+    template <typename T>
+    inline bool SafeRead(DWORD addr, T& outResult) {
+        return SafeRead((void*)addr, outResult);
+    }
+
     inline bool IsInitialized() {
         DWORD base = SAMPOffsets::GetSAMPBase();
         if (!base) return false;
         
         DWORD* ppSamp = (DWORD*)(base + SAMPOffsets::SAMP_INFO_OFFSET);
-        if (!ppSamp || !*ppSamp) return false;
+        DWORD pSampVal = 0;
+        if (!SafeRead<DWORD>(ppSamp, pSampVal) || !pSampVal) return false;
         
-        stSAMPInfo* pSamp = (stSAMPInfo*)(*ppSamp);
-        return pSamp->iGameState == SAMPOffsets::GAMESTATE_CONNECTED;
+        stSAMPInfo pSampInfo;
+        if (SafeRead<stSAMPInfo>((void*)pSampVal, pSampInfo)) {
+             return pSampInfo.iGameState == SAMPOffsets::GAMESTATE_CONNECTED;
+        }
+        return false;
+    }
+
+    inline stLocalPlayer* GetLocalPlayer() {
+        DWORD base = SAMPOffsets::GetSAMPBase();
+        if (!base) return nullptr;
+        
+        DWORD* ppSamp = (DWORD*)(base + SAMPOffsets::SAMP_INFO_OFFSET);
+        DWORD pSampVal = 0;
+        if (!SafeRead<DWORD>(ppSamp, pSampVal) || !pSampVal) return nullptr;
+        
+        // pPools is at offset 0x3DE in stSAMPInfo (0.3.DL R1)
+        DWORD pPoolsPtrAddress = pSampVal + 0x3DE;
+        DWORD pPoolsVal = 0;
+
+        // Read the pointer to pools
+        if (!SafeRead<DWORD>((void*)pPoolsPtrAddress, pPoolsVal) || !pPoolsVal) return nullptr;
+        
+        stPools poolStruct;
+        if (!SafeRead<stPools>((void*)pPoolsVal, poolStruct)) return nullptr;
+
+        stPlayerPool* pPlayerPool = poolStruct.pPlayerPool;
+        if (!pPlayerPool) return nullptr;
+        
+        // Read pLocalPlayer from PlayerPool (Offset 0x8)
+        stLocalPlayer* pLocalPlayer = nullptr;
+        if (SafeRead<stLocalPlayer*>((void*)((DWORD)pPlayerPool + 8), pLocalPlayer)) {
+            return pLocalPlayer;
+        }
+
+        return nullptr;
+    }
+
+    inline WORD GetVehicleID() {
+        stLocalPlayer* pLocal = GetLocalPlayer();
+        if (!pLocal) return 0xFFFF;
+
+        // Use SafeRead to access the member
+        WORD vehID = 0xFFFF;
+        // Calculate address of sCurrentVehicleID (Offset 4 per struct def)
+        if (SafeRead<WORD>((void*)((DWORD)pLocal + 4), vehID)) {
+             return vehID;
+        }
+        return 0xFFFF;
     }
     
     /**
@@ -111,6 +201,9 @@ namespace SAMP {
             DWORD* ppInput = (DWORD*)(base + SAMPOffsets::SAMP_CHAT_INPUT_OFFSET);
             if (!ppInput || !*ppInput) return;
             
+            // Check safe read before dereferencing
+            if (IsBadReadPtr(ppInput, 4)) return;
+
             typedef void(__thiscall* SendCmd_t)(void*, const char*);
             SendCmd_t fnSendCmd = (SendCmd_t)(base + SAMPOffsets::FUNC_SENDCMD);
             fnSendCmd((void*)*ppInput, message);
@@ -130,28 +223,31 @@ namespace SAMP {
         if (!base) return;
         
         DWORD* ppChat = (DWORD*)(base + SAMPOffsets::SAMP_CHAT_INFO_OFFSET);
-        if (!ppChat || !*ppChat) return;
+        if (!ppChat || IsBadReadPtr(ppChat, 4)) return;
+        if (!*ppChat || IsBadReadPtr((void*)*ppChat, 4)) return;
+        
+        // Validate the function address before calling
+        DWORD fnAddr = base + SAMPOffsets::FUNC_ADDCHATMESSAGE;
+        if (IsBadCodePtr((FARPROC)fnAddr)) return;
         
         typedef void(__thiscall* AddMsg_t)(void*, DWORD, const char*);
-        AddMsg_t fnAddMsg = (AddMsg_t)(base + SAMPOffsets::FUNC_ADDCHATMESSAGE);
+        AddMsg_t fnAddMsg = (AddMsg_t)fnAddr;
         fnAddMsg((void*)*ppChat, color, text);
     }
     
     /**
      * Get checkpoint data from SA-MP memory
-     * SA-MP manages its own checkpoint rendering
      */
     inline stCheckpoint* GetCurrentCheckpoint() {
         DWORD base = SAMPOffsets::GetSAMPBase();
         if (!base) return nullptr;
         
-        DWORD* ppSamp = (DWORD*)(base + SAMPOffsets::SAMP_INFO_OFFSET);
-        if (!ppSamp || !*ppSamp) return nullptr;
+        DWORD* ppCheckpoints = (DWORD*)(base + SAMPOffsets::SAMP_CHECKPOINT_MGR);
+        if (!ppCheckpoints || IsBadReadPtr(ppCheckpoints, 4)) return nullptr;
+        if (!*ppCheckpoints || IsBadReadPtr((void*)*ppCheckpoints, sizeof(stSAMPCheckpoints))) return nullptr;
         
-        // The checkpoint is usually at a fixed offset in the SAMP info struct
-        // This needs to be found via reverse engineering for your exact version
-        // Placeholder offset:
-        return nullptr; // TODO: find correct offset
+        stSAMPCheckpoints* pCheckpoints = (stSAMPCheckpoints*)(*ppCheckpoints);
+        return &pCheckpoints->normalCheckpoint;
     }
 
     /**
@@ -161,7 +257,12 @@ namespace SAMP {
         DWORD base = SAMPOffsets::GetSAMPBase();
         if (!base) return nullptr;
         
-        // TODO: find correct offset for your SA-MP version
-        return nullptr;
+        DWORD* ppCheckpoints = (DWORD*)(base + SAMPOffsets::SAMP_CHECKPOINT_MGR);
+        if (!ppCheckpoints || IsBadReadPtr(ppCheckpoints, 4)) return nullptr;
+        if (!*ppCheckpoints || IsBadReadPtr((void*)*ppCheckpoints, sizeof(stSAMPCheckpoints))) return nullptr;
+        
+        stSAMPCheckpoints* pCheckpoints = (stSAMPCheckpoints*)(*ppCheckpoints);
+        return &pCheckpoints->raceCheckpoint;
     }
 }
+

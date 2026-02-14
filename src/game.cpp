@@ -5,14 +5,7 @@
 
 namespace Game {
     void AddChatMessage(DWORD color, const char* text) {
-        __try {
-            SAMP::AddChatMessage(color, text);
-        } __except(EXCEPTION_EXECUTE_HANDLER) {
-            // Si los offsets de SA-MP no coinciden, no hacemos nada
-            // El mod funciona igual sin los mensajes de chat
-        }
-        
-        // Tambien logueamos al archivo para ver que paso
+        // Log to file only - SA-MP function calls disabled (wrong offsets crash)
         Log("[CHAT] %s", text);
     }
 

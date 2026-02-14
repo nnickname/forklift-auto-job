@@ -6,6 +6,7 @@
 
 #include <windows.h>
 #include <cmath>
+#include "samp.h"
 
 // ============================================================
 // GTA SA Memory Addresses (1.0 US)
@@ -29,18 +30,20 @@ namespace GameAddr {
     constexpr DWORD POS_Y_SIMPLE        = 0x8;
     constexpr DWORD POS_Z_SIMPLE        = 0xC;
     
-    // Checkpoint (GTA internal)
-    constexpr DWORD CHECKPOINT_X        = 0xC7DEC8;   // Standard checkpoint position
-    constexpr DWORD CHECKPOINT_Y        = 0xC7DECC;
-    constexpr DWORD CHECKPOINT_Z        = 0xC7DED0;
-    constexpr DWORD CHECKPOINT_SIZE     = 0xC7DED4;
-    constexpr DWORD CHECKPOINT_ACTIVE   = 0xC7DEDC;
-    
-    // Race checkpoint (GTA internal)
-    constexpr DWORD RACE_CP_X           = 0xC7DF00;
-    constexpr DWORD RACE_CP_Y           = 0xC7DF04;
-    constexpr DWORD RACE_CP_Z           = 0xC7DF08;
-    constexpr DWORD RACE_CP_ACTIVE      = 0xC7DF30;
+    // Checkpoint Pools (Standard & Race)
+    constexpr DWORD CHECKPOINT_ARRAY     = 0xC7DD58;   // CCheckpoint storage (32 items, 56 bytes each)
+    constexpr DWORD RACE_CP_ARRAY        = 0xC7F158;   // CRaceCheckpoint storage (16 items)
+
+    // Checkpoint Offsets (Standard CCheckpoint)
+    constexpr DWORD CP_OFF_TYPE          = 0x0;        // short (Type)
+    constexpr DWORD CP_OFF_ISUSED        = 0x2;        // bool (IsUsed)
+    constexpr DWORD CP_OFF_POS           = 0xC;        // CVector (Position)
+    constexpr DWORD CP_SIZE              = 56;         // Struct Size
+
+    // Race Checkpoint Offsets (CRaceCheckpoint)
+    constexpr DWORD RCP_OFF_TYPE         = 0x0;        // byte (Type)
+    constexpr DWORD RCP_OFF_POS          = 0x4;        // CVector (Position)
+    constexpr DWORD RCP_SIZE             = 40;         // Struct Size (approx/aligned)
     
     // Vehicle speed
     constexpr DWORD VEHICLE_SPEED_X     = 0x44;       // CVehicle -> speedX
@@ -49,6 +52,9 @@ namespace GameAddr {
     
     // Vehicle model
     constexpr DWORD ENTITY_MODEL_INDEX  = 0x22;       // CEntity -> nModelIndex (WORD)
+    
+    // GTA SA internal functions (1.0 US)
+    constexpr DWORD FUNC_FIND_GROUND_Z  = 0x569660;   // CWorld::FindGroundZForCoord(float x, float y)
 }
 
 // ============================================================
@@ -145,15 +151,24 @@ namespace Game {
     
     /**
      * Teleport the vehicle the player is in
-     * WARNING: Zeroes velocity - easily detectable!
+     * Moves BOTH vehicle AND player ped to keep camera/controls in sync.
+     * Zeroes velocity only on final arrival to avoid freezing player controls.
      */
     inline void TeleportVehicle(float x, float y, float z) {
         DWORD vehicle = GetPlayerVehicle();
         if (!vehicle) return;
         
+        // Move vehicle position
         SetEntityPosition(vehicle, x, y, z);
         
-        // Also zero out velocity to avoid weird physics
+        // CRITICAL: Also move the player ped so the camera follows!
+        // Without this, the camera stays at the old position and controls freeze.
+        DWORD ped = GetPlayerPed();
+        if (ped) {
+            SetEntityPosition(ped, x, y, z);
+        }
+        
+        // Zero out velocity to stop the vehicle
         *(float*)(vehicle + GameAddr::VEHICLE_SPEED_X) = 0.0f;
         *(float*)(vehicle + GameAddr::VEHICLE_SPEED_Y) = 0.0f;
         *(float*)(vehicle + GameAddr::VEHICLE_SPEED_Z) = 0.0f;
@@ -161,12 +176,63 @@ namespace Game {
     
     /**
      * Move the vehicle without touching velocity
-     * Used by gradual movement system
+     * Used by gradual/step movement - keeps velocity so physics don't fight us.
+     * Also moves the player ped to keep camera in sync.
      */
     inline void SetVehiclePosition(float x, float y, float z) {
         DWORD vehicle = GetPlayerVehicle();
         if (!vehicle) return;
+        
         SetEntityPosition(vehicle, x, y, z);
+        
+        // Also move the player ped so camera follows
+        DWORD ped = GetPlayerPed();
+        if (ped) {
+            SetEntityPosition(ped, x, y, z);
+        }
+    }
+    
+    /**
+     * Find the ground Z height at a given X/Y coordinate.
+     * Uses GTA SA internal CWorld::FindGroundZForCoord.
+     * Returns ground height, or fallback if function fails.
+     */
+    inline float FindGroundZ(float x, float y, float fallbackZ) {
+        __try {
+            typedef float(__cdecl* FindGroundZ_t)(float, float);
+            FindGroundZ_t fn = (FindGroundZ_t)GameAddr::FUNC_FIND_GROUND_Z;
+            float z = fn(x, y);
+            // Sanity check: if result is way below or 0, use fallback
+            if (z < -50.0f || z > 1000.0f) return fallbackZ;
+            return z;
+        } __except(EXCEPTION_EXECUTE_HANDLER) {
+            return fallbackZ;
+        }
+    }
+    
+    /**
+     * Teleport vehicle + ped to X/Y and find correct ground Z.
+     * Zeroes velocity. Used for step teleportation with terrain adaptation.
+     */
+    inline void TeleportVehicleToGround(float x, float y, float fallbackZ) {
+        DWORD vehicle = GetPlayerVehicle();
+        if (!vehicle) return;
+        
+        // Find ground height at destination, place vehicle 1.5 units above
+        float groundZ = FindGroundZ(x, y, fallbackZ);
+        float z = groundZ + 1.5f;
+        
+        SetEntityPosition(vehicle, x, y, z);
+        
+        DWORD ped = GetPlayerPed();
+        if (ped) {
+            SetEntityPosition(ped, x, y, z);
+        }
+        
+        // Zero velocity to prevent bouncing/physics issues
+        *(float*)(vehicle + GameAddr::VEHICLE_SPEED_X) = 0.0f;
+        *(float*)(vehicle + GameAddr::VEHICLE_SPEED_Y) = 0.0f;
+        *(float*)(vehicle + GameAddr::VEHICLE_SPEED_Z) = 0.0f;
     }
     
     /**
@@ -182,38 +248,94 @@ namespace Game {
     }
     
     /**
-     * Check if standard checkpoint is active
+     * Check if standard checkpoint is active (Iterates pool)
      */
     inline bool IsCheckpointActive() {
-        return *(DWORD*)GameAddr::CHECKPOINT_ACTIVE != 0;
+        // Try SA-MP first
+        if (SAMP::IsInitialized()) {
+            stCheckpoint* pCP = SAMP::GetCurrentCheckpoint();
+            if (pCP && pCP->bActive) return true;
+        }
+
+        for (int i = 0; i < 32; i++) {
+            DWORD cp = GameAddr::CHECKPOINT_ARRAY + (i * GameAddr::CP_SIZE);
+            // Check m_bIsUsed (offset 0x2)
+            if (*(bool*)(cp + GameAddr::CP_OFF_ISUSED)) {
+                return true;
+            }
+        }
+        return false;
     }
     
     /**
-     * Get standard checkpoint position
+     * Get standard checkpoint position (First active)
      */
     inline Vec3 GetCheckpointPosition() {
-        Vec3 pos;
-        pos.x = *(float*)GameAddr::CHECKPOINT_X;
-        pos.y = *(float*)GameAddr::CHECKPOINT_Y;
-        pos.z = *(float*)GameAddr::CHECKPOINT_Z;
+        Vec3 pos = {0, 0, 0};
+        
+        // Try SA-MP first
+        if (SAMP::IsInitialized()) {
+             stCheckpoint* pCP = SAMP::GetCurrentCheckpoint();
+             if (pCP && pCP->bActive) {
+                 return { pCP->fX, pCP->fY, pCP->fZ };
+             }
+        }
+
+        for (int i = 0; i < 32; i++) {
+            DWORD cp = GameAddr::CHECKPOINT_ARRAY + (i * GameAddr::CP_SIZE);
+            if (*(bool*)(cp + GameAddr::CP_OFF_ISUSED)) {
+                pos.x = *(float*)(cp + GameAddr::CP_OFF_POS);
+                pos.y = *(float*)(cp + GameAddr::CP_OFF_POS + 4);
+                pos.z = *(float*)(cp + GameAddr::CP_OFF_POS + 8);
+                return pos;
+            }
+        }
         return pos;
     }
     
     /**
-     * Check if race checkpoint is active
+     * Check if race checkpoint is active (Iterates pool)
      */
     inline bool IsRaceCheckpointActive() {
-        return *(DWORD*)GameAddr::RACE_CP_ACTIVE != 0;
+        // Try SA-MP first
+        if (SAMP::IsInitialized()) {
+            stRaceCheckpoint* pCP = SAMP::GetRaceCheckpoint();
+            if (pCP && pCP->bActive) return true;
+        }
+
+        for (int i = 0; i < 16; i++) {
+            DWORD cp = GameAddr::RACE_CP_ARRAY + (i * GameAddr::RCP_SIZE);
+            // Check Type != 0
+            if (*(BYTE*)(cp + GameAddr::RCP_OFF_TYPE) != 0) {
+                return true;
+            }
+        }
+        return false;
     }
     
     /**
-     * Get race checkpoint position
+     * Get race checkpoint position (First active)
      */
     inline Vec3 GetRaceCheckpointPosition() {
-        Vec3 pos;
-        pos.x = *(float*)GameAddr::RACE_CP_X;
-        pos.y = *(float*)GameAddr::RACE_CP_Y;
-        pos.z = *(float*)GameAddr::RACE_CP_Z;
+        Vec3 pos = {0, 0, 0};
+        
+        // Try SA-MP first
+        if (SAMP::IsInitialized()) {
+             stRaceCheckpoint* pCP = SAMP::GetRaceCheckpoint();
+             if (pCP && pCP->bActive) {
+                 return { pCP->fX, pCP->fY, pCP->fZ };
+             }
+        }
+
+        for (int i = 0; i < 16; i++) {
+            DWORD cp = GameAddr::RACE_CP_ARRAY + (i * GameAddr::RCP_SIZE);
+            if (*(BYTE*)(cp + GameAddr::RCP_OFF_TYPE) != 0) {
+                pos.x = *(float*)(cp + GameAddr::RCP_OFF_POS);
+                pos.y = *(float*)(cp + GameAddr::RCP_OFF_POS + 4);
+                pos.z = *(float*)(cp + GameAddr::RCP_OFF_POS + 8);
+                return pos;
+            }
+        }
         return pos;
     }
     

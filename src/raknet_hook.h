@@ -112,51 +112,29 @@ namespace RakNetHook {
     // Raw RakNet hooking requires complex BitStream implementation which crashes easily if wrong.
     // ============================================================
     
-    // Pointer to SA-MP Internal Misc Info (Trusted Source)
-    // 0.3.DL Addr: samp.dll + 0x2ACA3C
-    struct stSAMPMiscInfo { // Simplified stGameInfo
-        char pad_0[0x19];
-        // Race Checkpoint
-        float fRaceCheckpointPos[3];
-        float fRaceCheckpointNext[3];
-        float fRaceCheckpointSize;
-        BYTE  byteRaceType;
-        int   bRaceCheckpointsEnabled; // 1 if active
-        // Checkpoint
-        float fCheckpointPos[3];
-        float fCheckpointExtent[3];
-        int   bCheckpointsEnabled;     // 1 if active
-    };
-
-    inline stSAMPMiscInfo* GetMiscInfo() {
-        DWORD base = SAMPOffsets::GetSAMPBase();
-        if (!base) return nullptr;
-        DWORD* ptr = (DWORD*)(base + 0x2ACA3C); // 0.3.DL specific
-        if (!ptr || IsBadReadPtr(ptr, 4)) return nullptr;
-        return (stSAMPMiscInfo*)(*ptr);
-    }
-    
     // Called from Main Loop
     inline void Update() {
-        stSAMPMiscInfo* info = GetMiscInfo();
-        if (!info || IsBadReadPtr(info, sizeof(stSAMPMiscInfo))) return;
-
         bool active = false;
         Game::Vec3 pos = {0,0,0};
 
         // Priority 1: Checkpoint
-        if (info->bCheckpointsEnabled) {
-            active = true;
-            pos.x = info->fCheckpointPos[0];
-            pos.y = info->fCheckpointPos[1];
-            pos.z = info->fCheckpointPos[2];
-        }
-        // Priority 2: Race Checkpoint
-        else if (info->bRaceCheckpointsEnabled) {
-            active = true;
-            pos.x = info->fRaceCheckpointPos[0];
-            pos.y = info->fRaceCheckpointPos[1];
-            pos.z = info->fRaceCheckpointPos[2];
+        if (SAMP::IsInitialized()) {
+             stCheckpoint* cp = SAMP::GetCurrentCheckpoint();
+             if (cp && cp->bActive) {
+                 active = true;
+                 pos.x = cp->fX;
+                 pos.y = cp->fY;
+                 pos.z = cp->fZ;
+             }
+             else {
+                 stRaceCheckpoint* rcp = SAMP::GetRaceCheckpoint();
+                 if (rcp && rcp->bActive) {
+                     active = true;
+                     pos.x = rcp->fX;
+                     pos.y = rcp->fY;
+                     pos.z = rcp->fZ;
+                 }
+             }
         }
         
         // Push to forklift logic

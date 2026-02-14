@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include "game.h"
 #include "samp.h"
+#include "raknet_sender.h"
 
 namespace Forklift {
 
@@ -42,8 +43,8 @@ namespace Forklift {
     // ============================================================
     struct Config {
         // --- TP POR SALTOS ---
-        float stepDistance      = 10.0f;  // Coordenadas por salto (cambiar a gusto)
-        DWORD stepDelayMs      = 200;    // Milisegundos entre cada salto
+        float stepDistance      = 35.0f;  // Coordenadas por salto (más = menos saltos)
+        DWORD stepDelayMs      = 400;    // Milisegundos entre cada salto
         
         // --- ESPERAS EN CHECKPOINT ---
         DWORD pickupWaitMs     = 2500;   // Espera en recogida (ms)
@@ -116,74 +117,14 @@ namespace Forklift {
     }
 
     // ============================================================
-    // TP POR SALTOS - La función principal
-    //
-    // Cada vez que se llama (cada tick), verifica si ya pasó
-    // el delay entre saltos. Si sí, hace UN salto de stepDistance
-    // coordenadas en dirección al checkpoint.
-    //
-    // Retorna true cuando llegó al destino.
+    // TP POR SALTOS - DEPRECATED / REMOVED
     // ============================================================
+    /*
     static bool DoStepTP(Game::Vec3 target) {
-        DWORD now = GetTickCount();
-        
-        // Primer salto: inicializar
-        if (s_LastStepTime == 0) {
-            s_LastStepTime = now;
-            s_StepCount = 0;
-            // No hacemos nada el primer tick, solo iniciar el timer
-            return false;
-        }
-        
-        // Esperar el delay entre saltos
-        if (now - s_LastStepTime < s_Config.stepDelayMs) {
-            return false; // Todavía no toca saltar
-        }
-        s_LastStepTime = now;
-        
-        // Posición actual y distancia al destino
-        Game::Vec3 pos = Game::GetPlayerPosition();
-        target.z += s_Config.teleportZOffset;
-        float dist = Game::Distance3D(pos, target);
-        
-        // ¿Ya llegamos?
-        if (dist <= s_Config.arrivalThreshold) {
-            // TP final exacto al checkpoint
-            Game::TeleportVehicle(target.x, target.y, target.z);
-            s_LastStepTime = 0;
-            s_StepCount = 0;
-            return true;
-        }
-        
-        // Dirección hacia el checkpoint
-        Game::Vec3 dir;
-        dir.x = target.x - pos.x;
-        dir.y = target.y - pos.y;
-        dir.z = target.z - pos.z;
-        dir = Normalize(dir);
-        
-        // Distancia de este salto
-        float jump = s_Config.stepDistance;
-        
-        // Si estamos más cerca que stepDistance, saltar directo
-        if (jump >= dist) {
-            Game::TeleportVehicle(target.x, target.y, target.z);
-            s_LastStepTime = 0;
-            s_StepCount = 0;
-            return true;
-        }
-        
-        // Calcular nueva posición = actual + dirección * salto
-        float newX = pos.x + dir.x * jump;
-        float newY = pos.y + dir.y * jump;
-        float newZ = pos.z + dir.z * jump;
-        
-        // Hacer el TP del salto
-        Game::TeleportVehicle(newX, newY, newZ);
-        s_StepCount++;
-        
-        return false;
+        // ... (removed for RakNet Sync method)
+        return true;
     }
+    */
 
     // ============================================================
     // Log al chat
@@ -245,6 +186,14 @@ namespace Forklift {
             {
                 if (Game::IsCheckpointActive()) {
                     s_TargetPos = Game::GetCheckpointPosition();
+                    
+                    // Sanity check coordinates (Map bounds approx +/- 20000)
+                    if (abs(s_TargetPos.x) > 20000.0f || abs(s_TargetPos.y) > 20000.0f || abs(s_TargetPos.z) > 20000.0f) {
+                         LogState("Error: Checkpoint coords invalid / garbage. Aborting.");
+                         s_State = State::IDLE;
+                         break;
+                    }
+
                     s_State = State::TELEPORTING_PICKUP;
                     
                     float dist = Game::Distance3D(Game::GetPlayerPosition(), s_TargetPos);
@@ -255,6 +204,14 @@ namespace Forklift {
                 }
                 else if (Game::IsRaceCheckpointActive()) {
                     s_TargetPos = Game::GetRaceCheckpointPosition();
+
+                    // Sanity check coordinates
+                    if (abs(s_TargetPos.x) > 20000.0f || abs(s_TargetPos.y) > 20000.0f || abs(s_TargetPos.z) > 20000.0f) {
+                         LogState("Error: Race Checkpoint coords invalid / garbage. Aborting.");
+                         s_State = State::IDLE;
+                         break;
+                    }
+
                     s_State = State::TELEPORTING_PICKUP;
                     
                     float dist = Game::Distance3D(Game::GetPlayerPosition(), s_TargetPos);
@@ -269,14 +226,20 @@ namespace Forklift {
             // ---------------------------------------------------------
             case State::TELEPORTING_PICKUP:
             {
-                if (DoStepTP(s_TargetPos)) {
+                WORD vehID = SAMP::GetVehicleID();
+                if (vehID != 0xFFFF) {
+                    Sender::SendFakeVehicleSync(vehID, s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
                     s_State = State::WAITING_PICKUP;
                     s_WaitStart = now;
                     s_ActualWaitMs = CalcWaitTime(s_Config.pickupWaitMs);
                     
                     char buf[128];
-                    snprintf(buf, sizeof(buf), "Llegó en %d saltos! Esperando recogida...", s_StepCount);
+                    snprintf(buf, sizeof(buf), "Fake Sync enviado! Esperando recogida...");
                     LogState(buf);
+                } else {
+                     LogState("Error: GetVehicleID failed (returned 0xFFFF or Exception).");
+                     // We reset state to avoid infinite loop of trying and failing
+                     s_State = State::IDLE;
                 }
                 break;
             }
@@ -320,14 +283,26 @@ namespace Forklift {
             // ---------------------------------------------------------
             case State::TELEPORTING_DELIVERY:
             {
-                if (DoStepTP(s_TargetPos)) {
-                    s_State = State::WAITING_DELIVERY;
+                // Safety check for absurd coordinates (e.g. invalid memory read)
+                if (abs(s_TargetPos.x) > 20000.0f || abs(s_TargetPos.y) > 20000.0f) {
+                     LogState("Error: Coordenadas de Pickup invalidas! Abortando.");
+                     s_State = State::IDLE;
+                     break;
+                }
+
+                WORD vehID = SAMP::GetVehicleID();
+                if (vehID != 0xFFFF) {
+                    Sender::SendFakeVehicleSync(vehID, s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
+                    s_State = State::WAITING_PICKUP;
                     s_WaitStart = now;
-                    s_ActualWaitMs = CalcWaitTime(s_Config.deliveryWaitMs);
+                    s_ActualWaitMs = CalcWaitTime(s_Config.pickupWaitMs);
                     
                     char buf[128];
-                    snprintf(buf, sizeof(buf), "Llegó en %d saltos! Esperando entrega...", s_StepCount);
+                    snprintf(buf, sizeof(buf), "Fake Sync enviado! Esperando recogida...");
                     LogState(buf);
+                } else {
+                     LogState("Error: No se pudo obtener VehicleID (Crash prevented). Resetting.");
+                     s_State = State::IDLE;
                 }
                 break;
             }
