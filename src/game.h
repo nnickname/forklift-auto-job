@@ -25,6 +25,9 @@ namespace GameAddr {
     constexpr DWORD VEHICLE_SPEED_X     = 0x44;
     constexpr DWORD VEHICLE_SPEED_Y     = 0x48;
     constexpr DWORD VEHICLE_SPEED_Z     = 0x4C;
+    constexpr DWORD VEHICLE_TURN_SPEED_X = 0x50;
+    constexpr DWORD VEHICLE_TURN_SPEED_Y = 0x54;
+    constexpr DWORD VEHICLE_TURN_SPEED_Z = 0x58;
     constexpr DWORD FUNC_FIND_GROUND_Z  = 0x569660;
 }
 
@@ -104,12 +107,43 @@ namespace Game {
     inline void TeleportVehicle(float x, float y, float z) {
         DWORD vehicle = GetPlayerVehicle();
         if (!vehicle) return;
-        SetEntityPosition(vehicle, x, y, z);
-        DWORD ped = GetPlayerPed();
-        if (ped) SetEntityPosition(ped, x, y, z);
+
+        // Reset Physics (Speed)
         *(float*)(vehicle + GameAddr::VEHICLE_SPEED_X) = 0.0f;
         *(float*)(vehicle + GameAddr::VEHICLE_SPEED_Y) = 0.0f;
         *(float*)(vehicle + GameAddr::VEHICLE_SPEED_Z) = 0.0f;
+        
+        // Reset Angular Physics (Turn Speed) - Prevents spinning
+        *(float*)(vehicle + GameAddr::VEHICLE_TURN_SPEED_X) = 0.0f;
+        *(float*)(vehicle + GameAddr::VEHICLE_TURN_SPEED_Y) = 0.0f;
+        *(float*)(vehicle + GameAddr::VEHICLE_TURN_SPEED_Z) = 0.0f;
+
+        // Set Position
+        SetEntityPosition(vehicle, x, y, z);
+        DWORD ped = GetPlayerPed();
+        if (ped) SetEntityPosition(ped, x, y, z);
+
+        // Force Rotation to Flat (Identity Matrix) to prevent flying/rolling
+        DWORD* pMatrix = (DWORD*)(vehicle + GameAddr::MATRIX_OFFSET);
+        if (pMatrix && *pMatrix) {
+            DWORD m = *pMatrix;
+            // Right (X axis)
+            *(float*)(m + 0x00) = 1.0f; 
+            *(float*)(m + 0x04) = 0.0f; 
+            *(float*)(m + 0x08) = 0.0f;
+            // Forward (Y axis) NOTE: GTA uses Y as forward? usually Right, Forward, Up.
+            // Standard Identity:
+            // R: 1 0 0
+            // F: 0 1 0
+            // U: 0 0 1
+            *(float*)(m + 0x10) = 0.0f;
+            *(float*)(m + 0x14) = 1.0f;
+            *(float*)(m + 0x18) = 0.0f;
+            // Up (Z axis)
+            *(float*)(m + 0x20) = 0.0f;
+            *(float*)(m + 0x24) = 0.0f;
+            *(float*)(m + 0x28) = 1.0f;
+        }
     }
 
     // ============================================================
@@ -154,11 +188,34 @@ namespace Game {
         return pos;
     }
 
-    inline float Distance3D(Vec3 a, Vec3 b) {
+    inline double Distance3D(Vec3 a, Vec3 b) {
         float dx = a.x - b.x;
         float dy = a.y - b.y;
         float dz = a.z - b.z;
         return sqrtf(dx*dx + dy*dy + dz*dz);
+    }
+
+    // Force vehicle to stay still and upright
+    inline void StabilizeVehicle() {
+        DWORD vehicle = GetPlayerVehicle();
+        if (!vehicle) return;
+
+        // Zero Velocities (Freeze movement)
+        *(float*)(vehicle + GameAddr::VEHICLE_SPEED_X) = 0.0f;
+        *(float*)(vehicle + GameAddr::VEHICLE_SPEED_Y) = 0.0f;
+        *(float*)(vehicle + GameAddr::VEHICLE_SPEED_Z) = 0.0f;
+        *(float*)(vehicle + GameAddr::VEHICLE_TURN_SPEED_X) = 0.0f;
+        *(float*)(vehicle + GameAddr::VEHICLE_TURN_SPEED_Y) = 0.0f;
+        *(float*)(vehicle + GameAddr::VEHICLE_TURN_SPEED_Z) = 0.0f;
+
+        // Force Upright Orientation (Identity Matrix)
+        DWORD* pMatrix = (DWORD*)(vehicle + GameAddr::MATRIX_OFFSET);
+        if (pMatrix && *pMatrix) {
+            DWORD m = *pMatrix;
+            *(float*)(m + 0x00) = 1.0f; *(float*)(m + 0x04) = 0.0f; *(float*)(m + 0x08) = 0.0f;
+            *(float*)(m + 0x10) = 0.0f; *(float*)(m + 0x14) = 1.0f; *(float*)(m + 0x18) = 0.0f;
+            *(float*)(m + 0x20) = 0.0f; *(float*)(m + 0x24) = 0.0f; *(float*)(m + 0x28) = 1.0f;
+        }
     }
 
     // Chat & logging

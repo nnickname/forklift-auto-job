@@ -33,8 +33,8 @@ namespace Forklift {
     };
 
     struct Config {
-        DWORD pickupWaitMs     = 5000;
-        DWORD deliveryWaitMs   = 5000;
+        DWORD pickupWaitMs     = 6500;
+        DWORD deliveryWaitMs   = 6500;
         DWORD waitRandomMs     = 800;
         WORD  forkliftModelId  = 530;
         bool  checkVehicleModel = false;
@@ -151,7 +151,7 @@ namespace Forklift {
                 WORD vehID = SAMP::GetVehicleID();
                 if (vehID != 0xFFFF) {
                     // 1. PHYSICAL TELEPORT (User Request: "move me directly")
-                    Game::TeleportVehicle(s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
+                    Game::TeleportVehicle(s_TargetPos.x, s_TargetPos.y, s_TargetPos.z + 1.0f);
                     
                     // 2. FAKE ENTER (Sync + RPC)
                     bool ok = Sender::SendFakeEnterCheckpoint(vehID,
@@ -176,6 +176,9 @@ namespace Forklift {
 
             case State::WAITING_PICKUP:
             {
+                // [STABILIZATION] Force vehicle to stay put during wait
+                Game::StabilizeVehicle();
+
                 if (now - s_WaitStart >= s_ActualWaitMs) {
                     s_State = State::WAITING_RACE_CP;
                     s_TargetPos = {0, 0, 0}; // Reset for next CP
@@ -226,7 +229,7 @@ namespace Forklift {
                 WORD vehID = SAMP::GetVehicleID();
                 if (vehID != 0xFFFF) {
                     // 1. PHYSICAL TELEPORT
-                    Game::TeleportVehicle(s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
+                    Game::TeleportVehicle(s_TargetPos.x, s_TargetPos.y, s_TargetPos.z + 1.0f);
 
                     // 2. FAKE ENTER
                     bool ok = Sender::SendFakeEnterCheckpoint(vehID,
@@ -249,6 +252,9 @@ namespace Forklift {
 
             case State::WAITING_DELIVERY:
             {
+                // [STABILIZATION] Force vehicle to stay put during wait
+                Game::StabilizeVehicle();
+
                 if (now - s_WaitStart >= s_ActualWaitMs) {
                     char buf[128];
                     snprintf(buf, sizeof(buf), "Ciclo #%d completado!", s_CycleCount);
