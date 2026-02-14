@@ -47,6 +47,7 @@ namespace SAMPOffsets {
     //   BOOL m_bIsActive at 0xF4, BOOL m_bIsWasted at 0xF8
     //   ID m_nCurrentVehicle at 0xFC
     constexpr DWORD LOCALPLAYER_VEHICLEID  = 0xFC;
+    constexpr DWORD LOCALPLAYER_IN_CHECKPOINT = 0x1A7; // User provided offset (0.3.DL)
 
     // Game states (from CNetGame::GameMode enum)
     constexpr int GAMESTATE_WAIT_CONNECT  = 1;
@@ -54,10 +55,10 @@ namespace SAMPOffsets {
     constexpr int GAMESTATE_CONNECTED     = 5;
     constexpr int GAMESTATE_RESTARTING    = 11;
 
-    // SA-MP function offsets
-    constexpr DWORD FUNC_ADDCHATMESSAGE  = 0x64520;
-    constexpr DWORD FUNC_SENDCMD         = 0x65C60;
-    constexpr DWORD FUNC_SAY             = 0x57F0;
+    // SA-MP function offsets (verified from SAMP-API 0.3.DL-1)
+    constexpr DWORD FUNC_ADDCHATMESSAGE  = 0x67BE0;  // CChat::AddMessage(D3DCOLOR, const char*)
+    constexpr DWORD FUNC_SENDCMD         = 0x69340;  // CInput::Send(const char*) - handles cmds & chat
+    constexpr DWORD FUNC_SAY             = 0x5860;   // CLocalPlayer::Chat(const char*) - __thiscall
 
     // CGame* global pointer (contains checkpoint data)
     constexpr DWORD SAMP_CGAME_PTR       = 0x2ACA3C;
@@ -70,12 +71,20 @@ namespace SAMPOffsets {
 #pragma pack(push, 1)
 
 // CGame::m_checkpoint (embedded at CGame + 0x0C)
+// CGame::m_checkpoint (embedded at CGame + 0x0C)
+// Adjusted for 0.3.DL based on memory dump:
+// +0x00 Pos (12 bytes)
+// +0x0C Pad (12 bytes)
+// +0x18 Size (4 bytes, usually 3.0f)
+// +0x1C Enabled (4 bytes)
+// +0x20 Handle (4 bytes)
 struct stCheckpoint {
-    float fX, fY, fZ;             // CVector m_position  (12 bytes)
-    float fSizeX, fSizeY, fSizeZ; // CVector m_size      (12 bytes)
-    int   bEnabled;               // BOOL m_bEnabled      (4 bytes)
-    int   iHandle;                // GTAREF m_handle      (4 bytes)
-};  // Total: 32 bytes
+    float fX, fY, fZ;             // 0x00
+    char  pad[12];                // 0x0C
+    float fSize;                  // 0x18
+    int   bEnabled;               // 0x1C
+    int   iHandle;                // 0x20
+};
 
 // CGame::m_racingCheckpoint (embedded at CGame + 0x2C)
 // NO padding after bType - this is pack(1)!
@@ -84,10 +93,11 @@ struct stRaceCheckpoint {
     float fNextX, fNextY, fNextZ; // CVector m_nextPosition    (12 bytes)
     float fSize;                  // float m_fSize              (4 bytes)
     char  bType;                  // char m_nType               (1 byte)
+    char  padding[3];             // Padding for alignment      (3 bytes)
     int   bEnabled;               // BOOL m_bEnabled            (4 bytes)
     int   iMarker;                // GTAREF m_marker            (4 bytes)
     int   iHandle;                // GTAREF m_handle            (4 bytes)
-};  // Total: 41 bytes
+};  // Total: 44 bytes
 
 // CGame partial layout (offset-based access is safer than full struct)
 // CGame+0x00: CAudio*  (4)
@@ -171,6 +181,16 @@ namespace SAMP {
         return vehID;
     }
 
+    // Force "In Checkpoint" state in CLocalPlayer memory (Client-side trigger)
+    inline void SetInCheckpoint(bool active) {
+        DWORD pLocal = GetLocalPlayer();
+        if (!pLocal) return;
+        // Check valid pointer
+        if (IsBadWritePtr((void*)(pLocal + SAMPOffsets::LOCALPLAYER_IN_CHECKPOINT), 1)) return;
+        
+        *(BYTE*)(pLocal + SAMPOffsets::LOCALPLAYER_IN_CHECKPOINT) = active ? 1 : 0;
+    }
+
     // Get CGame pointer
     inline DWORD GetCGame() {
         DWORD base = SAMPOffsets::GetSAMPBase();
@@ -233,21 +253,20 @@ namespace SAMP {
         fnAddMsg((void*)pChat, color, text);
     }
 
-    // Send chat/command
+    // Send chat/command via CInput::Send (handles both / commands and regular text)
     inline void SendChat(const char* message) {
         DWORD base = SAMPOffsets::GetSAMPBase();
         if (!base) return;
-        if (message[0] == '/') {
-            DWORD pInput = 0;
-            if (!SafeRead<DWORD>(base + SAMPOffsets::SAMP_CHAT_INPUT_OFFSET, pInput) || !pInput) return;
-            typedef void(__thiscall* SendCmd_t)(void*, const char*);
-            SendCmd_t fnSendCmd = (SendCmd_t)(base + SAMPOffsets::FUNC_SENDCMD);
-            fnSendCmd((void*)pInput, message);
-        } else {
-            typedef void(__cdecl* Say_t)(const char*);
-            Say_t fnSay = (Say_t)(base + SAMPOffsets::FUNC_SAY);
-            fnSay(message);
-        }
+        DWORD pInput = 0;
+        if (!SafeRead<DWORD>(base + SAMPOffsets::SAMP_CHAT_INPUT_OFFSET, pInput) || !pInput) return;
+        if (IsBadReadPtr((void*)pInput, 4)) return;
+        DWORD fnAddr = base + SAMPOffsets::FUNC_SENDCMD;
+        if (IsBadCodePtr((FARPROC)fnAddr)) return;
+        typedef void(__thiscall* Send_t)(void*, const char*);
+        Send_t fnSend = (Send_t)fnAddr;
+        __try {
+            fnSend((void*)pInput, message);
+        } __except(EXCEPTION_EXECUTE_HANDLER) {}
     }
 }
 

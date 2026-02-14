@@ -2,15 +2,19 @@
 
 > **⚠️ SOLO PARA PRUEBAS DE ANTICHEAT** - Este mod está diseñado exclusivamente para probar sistemas anticheat en servidores propios.
 
+
+Build Command: 
+..\cmake-4.2.3-windows-x86_64\bin\cmake.exe --build . --config Release 2>&1
+
 ## Qué hace
 
 Automatiza el trabajo de montacargas (forklift) en SA-MP 0.3DL:
 1. Detecta el checkpoint de recogida (standard checkpoint)
 2. Teletransporta el vehículo al checkpoint
-3. Espera 2.5 segundos (simula recogida)
+3. Espera 5 segundos (simula recogida)
 4. Detecta el checkpoint de entrega (race checkpoint)
 5. Teletransporta el vehículo al checkpoint de entrega
-6. Espera 2.5 segundos (simula entrega)
+6. Espera 5 segundos (simula entrega)
 7. Repite el ciclo
 
 **Tecla F5** para activar/desactivar el mod en el juego.

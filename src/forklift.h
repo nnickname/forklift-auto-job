@@ -44,6 +44,7 @@ namespace Forklift {
     static DWORD      s_WaitStart = 0;
     static Config     s_Config;
     static Game::Vec3 s_TargetPos = {0, 0, 0};
+    static bool       s_IsRace = false; // Track CP type
     static int        s_CycleCount = 0;
     static DWORD      s_ActualWaitMs = 0;
 
@@ -61,6 +62,7 @@ namespace Forklift {
         s_State = State::IDLE;
         s_WaitStart = 0;
         s_CycleCount = 0;
+        s_IsRace = false;
     }
 
     static DWORD CalcWaitTime(DWORD baseMs) {
@@ -77,7 +79,7 @@ namespace Forklift {
     }
 
     // Called externally when checkpoint state changes
-    static void OnCheckpointUpdate(bool active, Game::Vec3 pos) {
+    static void OnCheckpointUpdate(bool active, Game::Vec3 pos, bool isRace) {
         if (!active) return;
         
         // Validate coordinates (reject garbage)
@@ -86,11 +88,14 @@ namespace Forklift {
 
         if (s_State == State::WAITING_CHECKPOINT) {
             s_TargetPos = pos;
+            s_IsRace = isRace;
         } else if (s_State == State::WAITING_RACE_CP || s_State == State::WAITING_PICKUP) {
             s_TargetPos = pos;
+            s_IsRace = isRace;
             s_State = State::WAITING_RACE_CP;
         } else if (s_State == State::WAITING_DELIVERY) {
             s_TargetPos = pos;
+            s_IsRace = isRace;
             s_State = State::WAITING_CHECKPOINT;
         }
     }
@@ -110,6 +115,7 @@ namespace Forklift {
                 s_State = State::WAITING_CHECKPOINT;
                 s_CycleCount++;
                 s_TargetPos = {0, 0, 0}; // Reset target
+                s_IsRace = false;
                 LogState("Buscando checkpoint de recogida...");
                 break;
             }
@@ -129,6 +135,7 @@ namespace Forklift {
                     Game::Vec3 cp = Game::GetCheckpointPosition();
                     if (fabsf(cp.x) > 1.0f || fabsf(cp.y) > 1.0f) {
                         s_TargetPos = cp;
+                        s_IsRace = false; // Memory read confirms normal CP
                         s_State = State::TELEPORTING_PICKUP;
                         char buf[128];
                         snprintf(buf, sizeof(buf), "CP (mem) encontrado! (%.1f, %.1f) Sync...",
@@ -144,7 +151,7 @@ namespace Forklift {
                 WORD vehID = SAMP::GetVehicleID();
                 if (vehID != 0xFFFF) {
                     bool ok = Sender::SendFakeEnterCheckpoint(vehID,
-                        s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
+                        s_TargetPos.x, s_TargetPos.y, s_TargetPos.z, s_IsRace);
                     
                     s_State = State::WAITING_PICKUP;
                     s_WaitStart = now;
@@ -168,6 +175,7 @@ namespace Forklift {
                 if (now - s_WaitStart >= s_ActualWaitMs) {
                     s_State = State::WAITING_RACE_CP;
                     s_TargetPos = {0, 0, 0}; // Reset for next CP
+                    s_IsRace = false;
                     LogState("Buscando checkpoint de entrega...");
                 }
                 break;
@@ -185,6 +193,7 @@ namespace Forklift {
                     Game::Vec3 rcp = Game::GetRaceCheckpointPosition();
                     if (fabsf(rcp.x) > 1.0f || fabsf(rcp.y) > 1.0f) {
                         s_TargetPos = rcp;
+                        s_IsRace = true; // Race CP confirmed
                         s_State = State::TELEPORTING_DELIVERY;
                         LogState("Race CP (mem) encontrado!");
                     }
@@ -194,6 +203,7 @@ namespace Forklift {
                     Game::Vec3 cp = Game::GetCheckpointPosition();
                     if (fabsf(cp.x) > 1.0f || fabsf(cp.y) > 1.0f) {
                         s_TargetPos = cp;
+                        s_IsRace = false; // Normal CP fallback
                         s_State = State::TELEPORTING_DELIVERY;
                         LogState("CP entrega (mem) encontrado!");
                     }
@@ -212,7 +222,7 @@ namespace Forklift {
                 WORD vehID = SAMP::GetVehicleID();
                 if (vehID != 0xFFFF) {
                     bool ok = Sender::SendFakeEnterCheckpoint(vehID,
-                        s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
+                        s_TargetPos.x, s_TargetPos.y, s_TargetPos.z, s_IsRace);
                     
                     s_State = State::WAITING_DELIVERY;
                     s_WaitStart = now;

@@ -25,12 +25,14 @@ namespace RakNetHook {
         if (!SAMP::IsInitialized()) return;
 
         bool cpActive = false;
+        bool isRace = false;
         Game::Vec3 cpPos = {0, 0, 0};
 
         // Check normal checkpoint
         stCheckpoint* pCP = SAMP::GetCurrentCheckpoint();
         if (pCP && pCP->bEnabled) {
             cpActive = true;
+            isRace = false;
             cpPos = { pCP->fX, pCP->fY, pCP->fZ };
         }
 
@@ -39,6 +41,7 @@ namespace RakNetHook {
             stRaceCheckpoint* pRCP = SAMP::GetRaceCheckpoint();
             if (pRCP && pRCP->bEnabled) {
                 cpActive = true;
+                isRace = true;
                 cpPos = { pRCP->fX, pRCP->fY, pRCP->fZ };
             }
         }
@@ -53,7 +56,7 @@ namespace RakNetHook {
                 s_LastCPX = cpPos.x;
                 s_LastCPY = cpPos.y;
                 s_LastCPZ = cpPos.z;
-                Forklift::OnCheckpointUpdate(true, cpPos);
+                Forklift::OnCheckpointUpdate(true, cpPos, isRace);
             }
         } else if (s_LastCPActive) {
             s_LastCPActive = false;

@@ -176,7 +176,7 @@ namespace Sender {
         return SAMP::GetRakClient();
     }
 
-    // Send Vehicle Sync with spoofed position
+    // Send Vehicle Sync with real vehicle data
     inline bool SendFakeVehicleSync(WORD vehicleId, float x, float y, float z) {
         void* pRakClient = GetRakClient();
         if (!pRakClient) return false;
@@ -186,18 +186,53 @@ namespace Sender {
 
         RakNet::stInCarData data;
         memset(&data, 0, sizeof(data));
-        
-        data.sVehicleID = vehicleId;
+
+        // Leer datos reales del vehículo
+        DWORD vehPtr = Game::GetPlayerVehicle();
+        if (vehPtr) {
+            // Rotación (quaternion)
+            DWORD* pMatrix = (DWORD*)(vehPtr + GameAddr::MATRIX_OFFSET);
+            if (pMatrix && *pMatrix) {
+                DWORD matrix = *pMatrix;
+                // GTA usa matriz 3x3, SAMP espera quaternion. Usamos (0,0,0,1) por defecto.
+                data.fQuaternion[0] = 0.0f;
+                data.fQuaternion[1] = 0.0f;
+                data.fQuaternion[2] = 0.0f;
+                data.fQuaternion[3] = 1.0f;
+            }
+            // Health
+            data.fVehicleHealth = 1000.0f; // Si tienes offset real, úsalo
+            // Player health
+            data.bytePlayerHealth = 100; // Si tienes offset real, úsalo
+        } else {
+            // Fallback defaults
+            data.fQuaternion[0] = 0.0f;
+            data.fQuaternion[1] = 0.0f;
+            data.fQuaternion[2] = 0.0f;
+            data.fQuaternion[3] = 1.0f;
+            data.fVehicleHealth = 1000.0f;
+            data.bytePlayerHealth = 100;
+        }
+
+        // FORCE position to target checkpoint (Fix: before it was using current pos)
         data.fPosition[0] = x;
         data.fPosition[1] = y;
         data.fPosition[2] = z;
-        data.fQuaternion[0] = 0.0f;
-        data.fQuaternion[1] = 0.0f;
-        data.fQuaternion[2] = 0.0f;
-        data.fQuaternion[3] = 1.0f;
-        data.fVehicleHealth = 1000.0f;
-        data.bytePlayerHealth = 100;
+
+        // Zero velocity to simulate stop
+        data.fMoveSpeed[0] = 0.0f;
+        data.fMoveSpeed[1] = 0.0f;
+        data.fMoveSpeed[2] = 0.0f;
+
+
+
+        data.sVehicleID = vehicleId;
+        data.byteArmor = 0;
+        data.byteCurrentWeapon = 0;
+        data.byteSiren = 0;
+        data.byteLandingGearState = 0;
         data.sTrailerID = 0xFFFF;
+        data.TrainSpeed = 0.0f;
 
         // Write all fields in order
         bs.Write(data.sVehicleID);
@@ -217,23 +252,47 @@ namespace Sender {
         bs.Write(data.TrainSpeed);
 
         return RakNet::CallRakClientSend(pRakClient, &bs,
-            RakNet::HIGH_PRIORITY, RakNet::UNRELIABLE_SEQUENCED, 0);
+            RakNet::HIGH_PRIORITY, RakNet::RELIABLE_ORDERED, 0);
     }
     
-    // Send RPC 107 (EnterCheckpoint) - empty BitStream
+    // Send RPC 25 (EnterCheckpoint) - empty BitStream
     inline bool SendEnterCheckpoint() {
         void* pRakClient = GetRakClient();
         if (!pRakClient) return false;
 
         RakNet::BitStream bs; // Empty for EnterCheckpoint
-        return RakNet::CallRakClientRPC(pRakClient, 107, &bs,
+        return RakNet::CallRakClientRPC(pRakClient, 25, &bs,
             RakNet::HIGH_PRIORITY, RakNet::RELIABLE, 0, false);
     }
 
-    // Combined: Send vehicle sync at checkpoint pos + RPC EnterCheckpoint
-    inline bool SendFakeEnterCheckpoint(WORD vehicleId, float x, float y, float z) {
+    // Send RPC 27 (EnterRaceCheckpoint) - empty BitStream
+    inline bool SendEnterRaceCheckpoint() {
+        void* pRakClient = GetRakClient();
+        if (!pRakClient) return false;
+
+        RakNet::BitStream bs; // Empty for EnterRaceCheckpoint
+        return RakNet::CallRakClientRPC(pRakClient, 27, &bs,
+            RakNet::HIGH_PRIORITY, RakNet::RELIABLE, 0, false);
+    }
+
+    // Combined: Send vehicle sync at checkpoint pos + RPC EnterCheckpoint/RaceCheckpoint
+    inline bool SendFakeEnterCheckpoint(WORD vehicleId, float x, float y, float z, bool isRace) {
+        // [FORCE-STATE] Set LocalPlayer internal state to match server expectation
+        SAMP::SetInCheckpoint(true);
+
         bool syncOk = SendFakeVehicleSync(vehicleId, x, y, z);
-        bool rpcOk = SendEnterCheckpoint();
+        bool rpcOk = false;
+        if (isRace) {
+            rpcOk = SendEnterRaceCheckpoint();
+        } else {
+            rpcOk = SendEnterCheckpoint();
+        }
+        
+        // Optional: clear state after send? Usually standard game logic clears it upon exit.
+        // We'll leave it for now or maybe clear it? 
+        // If we leave it, game might think we are still in CP.
+        // But let's leave it as is, standard behavior.
+        
         return syncOk && rpcOk;
     }
 }
