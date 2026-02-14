@@ -85,6 +85,13 @@ namespace Game {
 
     inline void SetEntityPosition(DWORD entity, float x, float y, float z) {
         if (!entity) return;
+        
+        // Update CPlaceable raw coordinates (always present)
+        *(float*)(entity + GameAddr::POS_X_SIMPLE) = x;
+        *(float*)(entity + GameAddr::POS_Y_SIMPLE) = y;
+        *(float*)(entity + GameAddr::POS_Z_SIMPLE) = z;
+
+        // Update CMatrix coordinates if present (used for rendering/physics)
         DWORD* pMatrix = (DWORD*)(entity + GameAddr::MATRIX_OFFSET);
         if (pMatrix && *pMatrix) {
             DWORD matrix = *pMatrix;

@@ -150,6 +150,10 @@ namespace Forklift {
             {
                 WORD vehID = SAMP::GetVehicleID();
                 if (vehID != 0xFFFF) {
+                    // 1. PHYSICAL TELEPORT (User Request: "move me directly")
+                    Game::TeleportVehicle(s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
+                    
+                    // 2. FAKE ENTER (Sync + RPC)
                     bool ok = Sender::SendFakeEnterCheckpoint(vehID,
                         s_TargetPos.x, s_TargetPos.y, s_TargetPos.z, s_IsRace);
                     
@@ -158,7 +162,7 @@ namespace Forklift {
                     s_ActualWaitMs = CalcWaitTime(s_Config.pickupWaitMs);
 
                     char buf[128];
-                    snprintf(buf, sizeof(buf), "FakeEnter enviado (%s). Esperando %dms...",
+                    snprintf(buf, sizeof(buf), "TP + FakeEnter enviado (%s). Esperando %dms...",
                         ok ? "OK" : "FAIL", s_ActualWaitMs);
                     LogState(buf);
                 } else {
@@ -221,6 +225,10 @@ namespace Forklift {
 
                 WORD vehID = SAMP::GetVehicleID();
                 if (vehID != 0xFFFF) {
+                    // 1. PHYSICAL TELEPORT
+                    Game::TeleportVehicle(s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
+
+                    // 2. FAKE ENTER
                     bool ok = Sender::SendFakeEnterCheckpoint(vehID,
                         s_TargetPos.x, s_TargetPos.y, s_TargetPos.z, s_IsRace);
                     
@@ -229,7 +237,7 @@ namespace Forklift {
                     s_ActualWaitMs = CalcWaitTime(s_Config.deliveryWaitMs);
 
                     char buf[128];
-                    snprintf(buf, sizeof(buf), "FakeEnter entrega (%s). Esperando %dms...",
+                    snprintf(buf, sizeof(buf), "TP + FakeEnter entrega (%s). Esperando %dms...",
                         ok ? "OK" : "FAIL", s_ActualWaitMs);
                     LogState(buf);
                 } else {
