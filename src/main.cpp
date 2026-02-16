@@ -17,6 +17,7 @@
 static bool g_ModActive = false;
 static bool g_Running   = true;
 static HANDLE g_Thread  = NULL;
+static bool g_PendingActivation = false; // Waiting for admin check before activation
 
 // ============================================================
 // Stealth: Server-side only interior trick for invisibility
@@ -98,6 +99,113 @@ static void DeactivateStealth() {
 }
 
 // ============================================================
+// Admin Detection System
+// Sends /admins, hashes chat entries before/after to count response lines.
+// If > 2 lines → admins online → block/deactivate mod.
+// ============================================================
+namespace AdminCheck {
+    enum class State { IDLE, SNAPSHOT, SENDING, WAITING, EVALUATING };
+
+    // CChat entry layout (SA-MP 0.3.DL R1)
+    static const DWORD ENTRY_ARRAY_OFFSET = 0x132;
+    static const int   ENTRY_SIZE = 0x100;   // 256 bytes per entry
+    static const int   NUM_ENTRIES = 100;
+    static const int   TEXT_OFFSET = 0x20;   // text field in entry
+    static const int   TEXT_SIZE = 144;
+
+    static const DWORD RESPONSE_WAIT_MS = 2500;    // Wait for server response
+    static const DWORD PERIODIC_MS = 120000;       // Re-check every 2 minutes
+    static const int   MAX_SAFE_LINES = 2;         // <=2 lines = no admins
+
+    static State s_State = State::IDLE;
+    static DWORD s_Timestamp = 0;
+    static DWORD s_LastPeriodic = 0;
+    static bool  s_IsPeriodic = false;
+    static DWORD s_Hashes[100] = {0};
+
+    static DWORD GetChatPtr() {
+        DWORD base = SAMPOffsets::GetSAMPBase();
+        if (!base) return 0;
+        DWORD pChat = 0;
+        SAMP::SafeRead<DWORD>(base + SAMPOffsets::SAMP_CHAT_INFO_OFFSET, pChat);
+        return pChat;
+    }
+
+    static DWORD HashEntry(DWORD pChat, int i) {
+        if (!pChat) return 0;
+        DWORD addr = pChat + ENTRY_ARRAY_OFFSET + (i * ENTRY_SIZE) + TEXT_OFFSET;
+        if (IsBadReadPtr((void*)addr, TEXT_SIZE)) return 0;
+        DWORD h = 5381;
+        __try {
+            for (int j = 0; j < TEXT_SIZE; j++)
+                h = ((h << 5) + h) + ((BYTE*)addr)[j];
+        } __except(EXCEPTION_EXECUTE_HANDLER) { return 0; }
+        return h;
+    }
+
+    static void TakeSnapshot() {
+        DWORD p = GetChatPtr();
+        for (int i = 0; i < NUM_ENTRIES; i++) s_Hashes[i] = HashEntry(p, i);
+    }
+
+    static int CountChanged() {
+        DWORD p = GetChatPtr();
+        int c = 0;
+        for (int i = 0; i < NUM_ENTRIES; i++)
+            if (HashEntry(p, i) != s_Hashes[i]) c++;
+        return c;
+    }
+
+    static void BeginCheck(bool periodic) {
+        s_IsPeriodic = periodic;
+        s_State = State::SNAPSHOT;
+    }
+
+    static bool IsChecking() { return s_State != State::IDLE; }
+
+    static bool NeedsPeriodic() {
+        return (GetTickCount() - s_LastPeriodic >= PERIODIC_MS);
+    }
+
+    // Returns true when check completes. Sets adminsOnline and lineCount.
+    static bool Update(bool& adminsOnline, int& lineCount) {
+        adminsOnline = false;
+        lineCount = 0;
+        switch (s_State) {
+            case State::IDLE: return false;
+            case State::SNAPSHOT:
+                TakeSnapshot();
+                s_State = State::SENDING;
+                return false;
+            case State::SENDING:
+                __try { SAMP::SendChat("/admins"); }
+                __except(EXCEPTION_EXECUTE_HANDLER) {
+                    Game::Log("[ADMIN] Exception sending /admins");
+                    s_State = State::IDLE;
+                    return true;
+                }
+                s_Timestamp = GetTickCount();
+                s_State = State::WAITING;
+                Game::Log("[ADMIN] /admins enviado, esperando respuesta...");
+                return false;
+            case State::WAITING:
+                if (GetTickCount() - s_Timestamp >= RESPONSE_WAIT_MS)
+                    s_State = State::EVALUATING;
+                return false;
+            case State::EVALUATING:
+                lineCount = CountChanged();
+                adminsOnline = (lineCount > MAX_SAFE_LINES);
+                Game::Log("[ADMIN] Resultado: %d lineas nuevas -> admins %s",
+                    lineCount, adminsOnline ? "ONLINE" : "offline");
+                s_State = State::IDLE;
+                s_LastPeriodic = GetTickCount();
+                return true;
+        }
+        return false;
+    }
+}
+
+// ============================================================
 // Diagnóstico completo de la cadena de punteros SA-MP
 // ============================================================
 static void DumpDiagnostics(DWORD pNetGame) {
@@ -176,49 +284,51 @@ static void DumpDiagnostics(DWORD pNetGame) {
 }
 
 // ============================================================
-// F5 toggle
+// Deactivation helper (used by F5 and admin auto-deactivate)
+// ============================================================
+static void FullDeactivate(const char* reason) {
+    g_ModActive = false;
+    g_PendingActivation = false;
+    Forklift::Reset();
+    __try { DeactivateStealth(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
+    __try { Game::RestorePlayerState(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
+    Game::Log("[MOD] Desactivado: %s", reason);
+}
+
+// ============================================================
+// F5 toggle (with admin check before activation)
 // ============================================================
 static void CheckToggle() {
     static bool keyWasDown = false;
     bool keyIsDown = (GetAsyncKeyState(VK_F5) & 0x8000) != 0;
 
     if (keyIsDown && !keyWasDown) {
-        g_ModActive = !g_ModActive;
-
-        if (g_ModActive) {
-            Beep(1000, 150);
-            Game::Log("[F5] Mod ACTIVADO");
-            // Activate stealth (interior 255 = invisible)
+        if (!g_ModActive && !g_PendingActivation) {
+            // Want to activate → start admin check first
+            g_PendingActivation = true;
+            AdminCheck::BeginCheck(false);
+            Beep(600, 100);
             __try {
-                ActivateStealth();
-            } __except(EXCEPTION_EXECUTE_HANDLER) {
-                Game::Log("[F5] Error activando stealth");
-            }
-        } else {
+                Game::AddChatMessage(0xFFFFFF00, "[Forklift] {FFFFFF}Verificando admins...");
+            } __except(EXCEPTION_EXECUTE_HANDLER) {}
+            Game::Log("[F5] Admin check iniciado");
+
+        } else if (g_PendingActivation) {
+            // Cancel pending check
+            g_PendingActivation = false;
+            Beep(300, 100);
+            __try {
+                Game::AddChatMessage(0xFFFF0000, "[Forklift] {FFFFFF}Activacion cancelada");
+            } __except(EXCEPTION_EXECUTE_HANDLER) {}
+
+        } else if (g_ModActive) {
+            // Deactivate
             Beep(400, 150);
-            Game::Log("[F5] Mod DESACTIVADO");
-            Forklift::Reset();
-            // Restore stealth (back to interior 0 = visible)
+            FullDeactivate("F5 manual");
             __try {
-                DeactivateStealth();
-            } __except(EXCEPTION_EXECUTE_HANDLER) {
-                Game::Log("[F5] Error desactivando stealth");
-            }
-            // Restaurar cámara y estado del jugador al desactivar
-            __try {
-                Game::RestorePlayerState();
-                Game::Log("[F5] Camera y estado restaurados");
-            } __except(EXCEPTION_EXECUTE_HANDLER) {
-                Game::Log("[F5] Error restaurando estado");
-            }
-        }
-
-        __try {
-            if (g_ModActive)
-                Game::AddChatMessage(0xFF00FF00, "[Forklift] {FFFFFF}Mod ACTIVADO - F5 para desactivar");
-            else
                 Game::AddChatMessage(0xFFFF0000, "[Forklift] {FFFFFF}Mod DESACTIVADO");
-        } __except(EXCEPTION_EXECUTE_HANDLER) {}
+            } __except(EXCEPTION_EXECUTE_HANDLER) {}
+        }
     }
     keyWasDown = keyIsDown;
 }
@@ -309,6 +419,56 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
         }
 
         // ============================================
+        // ADMIN CHECK (pending activation or periodic)
+        // ============================================
+        if (sampDetected && (g_PendingActivation || (g_ModActive && AdminCheck::IsChecking()))) {
+            __try {
+                bool adminsOnline = false;
+                int lineCount = 0;
+                if (AdminCheck::Update(adminsOnline, lineCount)) {
+                    if (g_PendingActivation) {
+                        // Initial check before activation
+                        g_PendingActivation = false;
+                        if (adminsOnline) {
+                            Beep(200, 300);
+                            char buf[128];
+                            snprintf(buf, sizeof(buf),
+                                "[Forklift] {FF0000}ADMINS detectados (%d lineas). Mod NO activado.", lineCount);
+                            Game::AddChatMessage(0xFFFF0000, buf);
+                            Game::Log("[ADMIN] Activation blocked: %d lines", lineCount);
+                        } else {
+                            // No admins → activate!
+                            g_ModActive = true;
+                            Beep(1000, 150);
+                            __try { ActivateStealth(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
+                            Game::AddChatMessage(0xFF00FF00,
+                                "[Forklift] {FFFFFF}Sin admins. Mod ACTIVADO - F5 para desactivar");
+                            Game::Log("[ADMIN] No admins (%d lines), mod activated", lineCount);
+                        }
+                    } else {
+                        // Periodic check while active
+                        if (adminsOnline) {
+                            Beep(200, 300); Sleep(100); Beep(200, 300);
+                            FullDeactivate("Admins detectados (periodico)");
+                            char buf[128];
+                            snprintf(buf, sizeof(buf),
+                                "[Forklift] {FF0000}ADMIN detectado! (%d lineas). Mod DESACTIVADO.", lineCount);
+                            Game::AddChatMessage(0xFFFF0000, buf);
+                        }
+                    }
+                }
+            } __except(EXCEPTION_EXECUTE_HANDLER) {
+                Game::Log("[ADMIN] Exception in admin check");
+            }
+        }
+
+        // Start periodic admin re-check every 2 minutes
+        if (g_ModActive && sampDetected && !AdminCheck::IsChecking() && AdminCheck::NeedsPeriodic()) {
+            AdminCheck::BeginCheck(true);
+            Game::Log("[ADMIN] Periodic admin check started");
+        }
+
+        // ============================================
         // LÓGICA DEL MOD
         // ============================================
         if (g_ModActive && sampDetected) {
@@ -321,20 +481,16 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                     bool inVeh = Game::IsPlayerInVehicle();
                     Game::Vec3 p = Game::GetPlayerPosition();
 
-                    // Checkpoint diagnostic
                     float cx = 0, cy = 0, cz = 0;
                     int cEnabled = 0;
                     SAMP::DiagReadCheckpoint(cx, cy, cz, cEnabled);
-
                     WORD vehID = SAMP::GetVehicleID();
-
                     bool cpActive = Game::IsCheckpointActive();
                     bool rcpActive = Game::IsRaceCheckpointActive();
 
                     Game::Log("[DBG] St=%d Ped=0x%lX Veh=%d VehID=%d Pos=(%.1f,%.1f,%.1f) CP(%.1f,%.1f,%.1f en=%d) cpAct=%d rcpAct=%d",
                         (int)Forklift::GetState(), ped, inVeh ? 1 : 0, vehID,
-                        p.x, p.y, p.z,
-                        cx, cy, cz, cEnabled,
+                        p.x, p.y, p.z, cx, cy, cz, cEnabled,
                         cpActive ? 1 : 0, rcpActive ? 1 : 0);
                 } __except(EXCEPTION_EXECUTE_HANDLER) {
                     Game::Log("[DBG] Exception en debug log");
@@ -357,13 +513,9 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                 Game::Log("[MAIN] Exception en logic loop");
             }
 
-            // [STEALTH] Periodically re-send interior RPC to server
-            // (does NOT touch GTA memory, only server-side)
-            __try {
-                StealthTick();
-            } __except(EXCEPTION_EXECUTE_HANDLER) {
-                Game::Log("[STEALTH] Exception in StealthTick");
-            }
+            // [STEALTH] Periodically re-send interior RPC
+            __try { StealthTick(); }
+            __except(EXCEPTION_EXECUTE_HANDLER) {}
         }
 
         Sleep(50);

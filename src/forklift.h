@@ -73,9 +73,8 @@ namespace Forklift {
     }
 
     static void LogState(const char* action) {
-        char buffer[256];
-        snprintf(buffer, sizeof(buffer), "[Forklift] Ciclo #%d - %s", s_CycleCount, action);
-        Game::AddChatMessage(0xFF00BFFF, buffer);
+        // File-only log (no chat messages to avoid interfering with admin detection)
+        Game::Log("[Forklift] Ciclo #%d - %s", s_CycleCount, action);
     }
 
     // Called externally when checkpoint state changes
