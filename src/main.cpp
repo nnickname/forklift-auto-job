@@ -19,6 +19,85 @@ static bool g_Running   = true;
 static HANDLE g_Thread  = NULL;
 
 // ============================================================
+// Stealth: Server-side only interior trick for invisibility
+// Strategy: Keep GTA interior=0 (normal map), but tell server interior=255
+// This makes us invisible to other players without breaking the local map.
+// virtualworld stays 0 so checkpoints keep working.
+// ============================================================
+static const BYTE STEALTH_INTERIOR = 255; // Interior ID to send to server
+static bool g_StealthActive = false;
+static DWORD g_LastStealthSync = 0; // Timestamp of last RPC re-send
+static const DWORD STEALTH_RESYNC_MS = 2000; // Re-send RPC every 2 seconds
+
+// Send SetInterior RPC to server (server-side only, does NOT touch GTA memory)
+// RPC ID 118 = SetInteriorId in SA-MP
+static void SendSetInteriorRPC(BYTE interior) {
+    void* pRakClient = SAMP::GetRakClient();
+    if (!pRakClient) return;
+    
+    __try {
+        typedef bool(__thiscall* RPC_t)(void*, int*, void*, int, int, char, bool);
+        void** vtable = *(void***)pRakClient;
+        if (IsBadReadPtr(vtable, 26 * sizeof(void*))) return;
+        RPC_t fnRPC = (RPC_t)vtable[25];
+        if (IsBadCodePtr((FARPROC)fnRPC)) return;
+        
+        // Manual bitstream struct matching RakNet 2.x layout
+        struct {
+            int numberOfBitsUsed;       // 0x00
+            int numberOfBitsAllocated;  // 0x04
+            int readOffset;             // 0x08
+            unsigned char* data;        // 0x0C
+            unsigned char stackData[256]; // 0x10
+            bool copyData;              // 0x110
+        } bs;
+        
+        bs.numberOfBitsUsed = 8; // 1 byte = 8 bits
+        bs.numberOfBitsAllocated = 256 * 8;
+        bs.readOffset = 0;
+        bs.data = bs.stackData;
+        bs.copyData = false;
+        memset(bs.stackData, 0, 256);
+        bs.stackData[0] = interior;
+        
+        int rpcId = 118; // SetInteriorId
+        fnRPC(pRakClient, &rpcId, &bs, 1, 2, 0, false); // HIGH_PRIORITY, RELIABLE
+    } __except(EXCEPTION_EXECUTE_HANDLER) {
+        Game::Log("[STEALTH] Exception sending SetInterior RPC");
+    }
+}
+
+// Periodic stealth sync - re-sends interior RPC to counter SA-MP auto-correction
+// SA-MP client detects GTA interior=0 and may try to re-sync with server,
+// so we periodically override it back to 255.
+static void StealthTick() {
+    if (!g_StealthActive) return;
+    
+    DWORD now = GetTickCount();
+    if (now - g_LastStealthSync >= STEALTH_RESYNC_MS) {
+        g_LastStealthSync = now;
+        SendSetInteriorRPC(STEALTH_INTERIOR);
+    }
+}
+
+// Activate stealth mode (server-side only)
+static void ActivateStealth() {
+    if (g_StealthActive) return;
+    g_StealthActive = true;
+    g_LastStealthSync = GetTickCount();
+    SendSetInteriorRPC(STEALTH_INTERIOR);
+    Game::Log("[STEALTH] RPC sent: interior=%d (server-side invisible, GTA stays normal)", (int)STEALTH_INTERIOR);
+}
+
+// Deactivate stealth mode - tell server we're back to interior 0
+static void DeactivateStealth() {
+    if (!g_StealthActive) return;
+    g_StealthActive = false;
+    SendSetInteriorRPC(0);
+    Game::Log("[STEALTH] RPC sent: interior=0 (visible again)");
+}
+
+// ============================================================
 // Diagnóstico completo de la cadena de punteros SA-MP
 // ============================================================
 static void DumpDiagnostics(DWORD pNetGame) {
@@ -109,10 +188,29 @@ static void CheckToggle() {
         if (g_ModActive) {
             Beep(1000, 150);
             Game::Log("[F5] Mod ACTIVADO");
+            // Activate stealth (interior 255 = invisible)
+            __try {
+                ActivateStealth();
+            } __except(EXCEPTION_EXECUTE_HANDLER) {
+                Game::Log("[F5] Error activando stealth");
+            }
         } else {
             Beep(400, 150);
             Game::Log("[F5] Mod DESACTIVADO");
             Forklift::Reset();
+            // Restore stealth (back to interior 0 = visible)
+            __try {
+                DeactivateStealth();
+            } __except(EXCEPTION_EXECUTE_HANDLER) {
+                Game::Log("[F5] Error desactivando stealth");
+            }
+            // Restaurar cámara y estado del jugador al desactivar
+            __try {
+                Game::RestorePlayerState();
+                Game::Log("[F5] Camera y estado restaurados");
+            } __except(EXCEPTION_EXECUTE_HANDLER) {
+                Game::Log("[F5] Error restaurando estado");
+            }
         }
 
         __try {
@@ -257,6 +355,14 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                 }
             } __except(EXCEPTION_EXECUTE_HANDLER) {
                 Game::Log("[MAIN] Exception en logic loop");
+            }
+
+            // [STEALTH] Periodically re-send interior RPC to server
+            // (does NOT touch GTA memory, only server-side)
+            __try {
+                StealthTick();
+            } __except(EXCEPTION_EXECUTE_HANDLER) {
+                Game::Log("[STEALTH] Exception in StealthTick");
             }
         }
 

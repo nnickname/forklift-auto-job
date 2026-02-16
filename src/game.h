@@ -29,6 +29,11 @@ namespace GameAddr {
     constexpr DWORD VEHICLE_TURN_SPEED_Y = 0x54;
     constexpr DWORD VEHICLE_TURN_SPEED_Z = 0x58;
     constexpr DWORD FUNC_FIND_GROUND_Z  = 0x569660;
+
+    // GTA SA Camera (1.0 US)
+    constexpr DWORD CAMERA_OBJECT        = 0xB6F028;   // TheCamera (CCamera instance)
+    constexpr DWORD FUNC_RESTORE_CAMERA  = 0x50B930;   // CCamera::Restore()
+    constexpr DWORD FUNC_RESTORE_JUMPCUT = 0x50BAB0;   // CCamera::RestoreWithJumpCut()
 }
 
 // ============================================================
@@ -215,6 +220,45 @@ namespace Game {
             *(float*)(m + 0x00) = 1.0f; *(float*)(m + 0x04) = 0.0f; *(float*)(m + 0x08) = 0.0f;
             *(float*)(m + 0x10) = 0.0f; *(float*)(m + 0x14) = 1.0f; *(float*)(m + 0x18) = 0.0f;
             *(float*)(m + 0x20) = 0.0f; *(float*)(m + 0x24) = 0.0f; *(float*)(m + 0x28) = 1.0f;
+        }
+    }
+
+    // Restore GTA SA camera to normal follow mode
+    inline void RestoreCamera() {
+        __try {
+            // CCamera::Restore() - restaura la cámara al modo normal
+            typedef void(__thiscall* Restore_t)(void*);
+            void* pCamera = (void*)GameAddr::CAMERA_OBJECT;
+            if (!IsBadReadPtr(pCamera, 4)) {
+                Restore_t fnRestore = (Restore_t)GameAddr::FUNC_RESTORE_CAMERA;
+                if (!IsBadCodePtr((FARPROC)fnRestore)) {
+                    fnRestore(pCamera);
+                }
+            }
+
+            // También RestoreWithJumpCut para forzar reset inmediato
+            typedef void(__thiscall* RestoreJC_t)(void*);
+            RestoreJC_t fnRestoreJC = (RestoreJC_t)GameAddr::FUNC_RESTORE_JUMPCUT;
+            if (!IsBadCodePtr((FARPROC)fnRestoreJC)) {
+                fnRestoreJC(pCamera);
+            }
+        } __except(EXCEPTION_EXECUTE_HANDLER) {
+            // Camera restore failed - log but don't crash
+        }
+    }
+
+    // Full cleanup when mod is deactivated
+    inline void RestorePlayerState() {
+        // 1. Restore camera
+        RestoreCamera();
+
+        // 2. Ensure SetInCheckpoint is off
+        SAMP::SetInCheckpoint(false);
+
+        // 3. Give vehicle a tiny nudge to "wake up" GTA's physics/camera tracking
+        DWORD vehicle = GetPlayerVehicle();
+        if (vehicle) {
+            *(float*)(vehicle + GameAddr::VEHICLE_SPEED_Z) = 0.001f;
         }
     }
 
