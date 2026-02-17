@@ -100,18 +100,11 @@ static void DeactivateStealth() {
 
 // ============================================================
 // Admin Detection System
-// Sends /admins, hashes chat entries before/after to count response lines.
+// Reads chatlog.txt before/after /admins to count response lines.
 // If > 2 lines → admins online → block/deactivate mod.
 // ============================================================
 namespace AdminCheck {
     enum class State { IDLE, SNAPSHOT, SENDING, WAITING, EVALUATING };
-
-    // CChat entry layout (SA-MP 0.3.DL R1)
-    static const DWORD ENTRY_ARRAY_OFFSET = 0x132;
-    static const int   ENTRY_SIZE = 0x100;   // 256 bytes per entry
-    static const int   NUM_ENTRIES = 100;
-    static const int   TEXT_OFFSET = 0x20;   // text field in entry
-    static const int   TEXT_SIZE = 144;
 
     static const DWORD RESPONSE_WAIT_MS = 2500;    // Wait for server response
     static const DWORD PERIODIC_MS = 120000;       // Re-check every 2 minutes
@@ -121,39 +114,78 @@ namespace AdminCheck {
     static DWORD s_Timestamp = 0;
     static DWORD s_LastPeriodic = 0;
     static bool  s_IsPeriodic = false;
-    static DWORD s_Hashes[100] = {0};
 
-    static DWORD GetChatPtr() {
-        DWORD base = SAMPOffsets::GetSAMPBase();
-        if (!base) return 0;
-        DWORD pChat = 0;
-        SAMP::SafeRead<DWORD>(base + SAMPOffsets::SAMP_CHAT_INFO_OFFSET, pChat);
-        return pChat;
+    // File-based approach: read chatlog.txt (reliable, no memory offsets)
+    static char  s_ChatlogPath[MAX_PATH] = {0};
+    static DWORD s_PreFileSize = 0;
+
+    static bool FindChatlog() {
+        if (s_ChatlogPath[0] != 0) return true;
+
+        // Try 1: Documents\GTA San Andreas User Files\SAMP\chatlog.txt
+        char docPath[MAX_PATH];
+        if (GetEnvironmentVariableA("USERPROFILE", docPath, MAX_PATH)) {
+            snprintf(s_ChatlogPath, MAX_PATH,
+                "%s\\Documents\\GTA San Andreas User Files\\SAMP\\chatlog.txt", docPath);
+            DWORD attr = GetFileAttributesA(s_ChatlogPath);
+            if (attr != INVALID_FILE_ATTRIBUTES) {
+                Game::Log("[ADMIN] chatlog.txt: %s", s_ChatlogPath);
+                return true;
+            }
+        }
+
+        // Try 2: GTA SA directory (fallback)
+        char exePath[MAX_PATH];
+        GetModuleFileNameA(NULL, exePath, MAX_PATH);
+        char* lastSlash = strrchr(exePath, '\\');
+        if (lastSlash) *(lastSlash + 1) = '\0';
+        snprintf(s_ChatlogPath, MAX_PATH, "%schatlog.txt", exePath);
+        DWORD attr = GetFileAttributesA(s_ChatlogPath);
+        if (attr != INVALID_FILE_ATTRIBUTES) {
+            Game::Log("[ADMIN] chatlog.txt (game dir): %s", s_ChatlogPath);
+            return true;
+        }
+
+        Game::Log("[ADMIN] chatlog.txt NOT found in Documents or game dir");
+        s_ChatlogPath[0] = 0;
+        return false;
     }
 
-    static DWORD HashEntry(DWORD pChat, int i) {
-        if (!pChat) return 0;
-        DWORD addr = pChat + ENTRY_ARRAY_OFFSET + (i * ENTRY_SIZE) + TEXT_OFFSET;
-        if (IsBadReadPtr((void*)addr, TEXT_SIZE)) return 0;
-        DWORD h = 5381;
-        __try {
-            for (int j = 0; j < TEXT_SIZE; j++)
-                h = ((h << 5) + h) + ((BYTE*)addr)[j];
-        } __except(EXCEPTION_EXECUTE_HANDLER) { return 0; }
-        return h;
+    static DWORD GetChatlogSize() {
+        if (!FindChatlog()) return 0;
+        WIN32_FILE_ATTRIBUTE_DATA fad;
+        if (!GetFileAttributesExA(s_ChatlogPath, GetFileExInfoStandard, &fad))
+            return 0;
+        return fad.nFileSizeLow;
     }
 
-    static void TakeSnapshot() {
-        DWORD p = GetChatPtr();
-        for (int i = 0; i < NUM_ENTRIES; i++) s_Hashes[i] = HashEntry(p, i);
-    }
+    // Count newlines only in the NEW bytes (after s_PreFileSize)
+    static int CountNewLines() {
+        DWORD newSize = GetChatlogSize();
+        if (newSize <= s_PreFileSize) return 0;
+        DWORD diff = newSize - s_PreFileSize;
 
-    static int CountChanged() {
-        DWORD p = GetChatPtr();
-        int c = 0;
-        for (int i = 0; i < NUM_ENTRIES; i++)
-            if (HashEntry(p, i) != s_Hashes[i]) c++;
-        return c;
+        HANDLE hFile = CreateFileA(s_ChatlogPath, GENERIC_READ,
+            FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+        if (hFile == INVALID_HANDLE_VALUE) return 0;
+
+        SetFilePointer(hFile, s_PreFileSize, NULL, FILE_BEGIN);
+        char buf[4096];
+        int lineCount = 0;
+        DWORD remaining = diff;
+        while (remaining > 0) {
+            DWORD toRead = (remaining < sizeof(buf)) ? remaining : (DWORD)sizeof(buf);
+            DWORD bytesRead = 0;
+            if (!ReadFile(hFile, buf, toRead, &bytesRead, NULL) || bytesRead == 0) break;
+            for (DWORD i = 0; i < bytesRead; i++) {
+                if (buf[i] == '\n') lineCount++;
+            }
+            remaining -= bytesRead;
+        }
+        CloseHandle(hFile);
+        Game::Log("[ADMIN] Chatlog: %lu->%lu (+%lu bytes), %d lines",
+            s_PreFileSize, newSize, diff, lineCount);
+        return lineCount;
     }
 
     static void BeginCheck(bool periodic) {
@@ -167,15 +199,15 @@ namespace AdminCheck {
         return (GetTickCount() - s_LastPeriodic >= PERIODIC_MS);
     }
 
-    // Returns true when check completes. Sets adminsOnline and lineCount.
     static bool Update(bool& adminsOnline, int& lineCount) {
         adminsOnline = false;
         lineCount = 0;
         switch (s_State) {
             case State::IDLE: return false;
             case State::SNAPSHOT:
-                TakeSnapshot();
+                s_PreFileSize = GetChatlogSize();
                 s_State = State::SENDING;
+                Game::Log("[ADMIN] Snapshot: chatlog = %lu bytes", s_PreFileSize);
                 return false;
             case State::SENDING:
                 __try { SAMP::SendChat("/admins"); }
@@ -186,16 +218,16 @@ namespace AdminCheck {
                 }
                 s_Timestamp = GetTickCount();
                 s_State = State::WAITING;
-                Game::Log("[ADMIN] /admins enviado, esperando respuesta...");
+                Game::Log("[ADMIN] /admins sent, waiting %dms...", RESPONSE_WAIT_MS);
                 return false;
             case State::WAITING:
                 if (GetTickCount() - s_Timestamp >= RESPONSE_WAIT_MS)
                     s_State = State::EVALUATING;
                 return false;
             case State::EVALUATING:
-                lineCount = CountChanged();
+                lineCount = CountNewLines();
                 adminsOnline = (lineCount > MAX_SAFE_LINES);
-                Game::Log("[ADMIN] Resultado: %d lineas nuevas -> admins %s",
+                Game::Log("[ADMIN] Result: %d lines -> admins %s",
                     lineCount, adminsOnline ? "ONLINE" : "offline");
                 s_State = State::IDLE;
                 s_LastPeriodic = GetTickCount();
@@ -446,14 +478,14 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                             Game::Log("[ADMIN] No admins (%d lines), mod activated", lineCount);
                         }
                     } else {
-                        // Periodic check while active
+                        // Periodic check while active → EMERGENCY: deactivate + quit
                         if (adminsOnline) {
                             Beep(200, 300); Sleep(100); Beep(200, 300);
                             FullDeactivate("Admins detectados (periodico)");
-                            char buf[128];
-                            snprintf(buf, sizeof(buf),
-                                "[Forklift] {FF0000}ADMIN detectado! (%d lineas). Mod DESACTIVADO.", lineCount);
-                            Game::AddChatMessage(0xFFFF0000, buf);
+                            Game::Log("[ADMIN] EMERGENCY: Admin detected while active! Sending /q");
+                            // Send /q to disconnect immediately
+                            __try { SAMP::SendChat("/q"); }
+                            __except(EXCEPTION_EXECUTE_HANDLER) {}
                         }
                     }
                 }
@@ -504,8 +536,7 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                     RakNetHook::Update();
                 } else {
                     auto st = Forklift::GetState();
-                    if (st == Forklift::State::TELEPORTING_PICKUP ||
-                        st == Forklift::State::TELEPORTING_DELIVERY) {
+                    if (st == Forklift::State::TELEPORTING) {
                         Forklift::Reset();
                     }
                 }

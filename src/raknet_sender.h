@@ -255,42 +255,68 @@ namespace Sender {
             RakNet::HIGH_PRIORITY, RakNet::RELIABLE_ORDERED, 0);
     }
     
-    // Send RPC 25 (EnterCheckpoint) - empty BitStream
+    // Send RPC 25 (EnterCheckpoint)
     inline bool SendEnterCheckpoint() {
         void* pRakClient = GetRakClient();
         if (!pRakClient) return false;
-
-        RakNet::BitStream bs; // Empty for EnterCheckpoint
+        RakNet::BitStream bs;
         return RakNet::CallRakClientRPC(pRakClient, 25, &bs,
             RakNet::HIGH_PRIORITY, RakNet::RELIABLE, 0, false);
     }
 
-    // Send RPC 27 (EnterRaceCheckpoint) - empty BitStream
+    // Send RPC 26 (LeaveCheckpoint)
+    inline bool SendLeaveCheckpoint() {
+        void* pRakClient = GetRakClient();
+        if (!pRakClient) return false;
+        RakNet::BitStream bs;
+        return RakNet::CallRakClientRPC(pRakClient, 26, &bs,
+            RakNet::HIGH_PRIORITY, RakNet::RELIABLE, 0, false);
+    }
+
+    // Send RPC 27 (EnterRaceCheckpoint)
     inline bool SendEnterRaceCheckpoint() {
         void* pRakClient = GetRakClient();
         if (!pRakClient) return false;
-
-        RakNet::BitStream bs; // Empty for EnterRaceCheckpoint
+        RakNet::BitStream bs;
         return RakNet::CallRakClientRPC(pRakClient, 27, &bs,
             RakNet::HIGH_PRIORITY, RakNet::RELIABLE, 0, false);
     }
 
-    // Combined: Send vehicle sync at checkpoint pos + RPC EnterCheckpoint/RaceCheckpoint
-    inline bool SendFakeEnterCheckpoint(WORD vehicleId, float x, float y, float z, bool isRace) {
-        // [FORCE-STATE] Set LocalPlayer internal state to match server expectation
-        SAMP::SetInCheckpoint(true);
+    // Send RPC 28 (LeaveRaceCheckpoint)
+    inline bool SendLeaveRaceCheckpoint() {
+        void* pRakClient = GetRakClient();
+        if (!pRakClient) return false;
+        RakNet::BitStream bs;
+        return RakNet::CallRakClientRPC(pRakClient, 28, &bs,
+            RakNet::HIGH_PRIORITY, RakNet::RELIABLE, 0, false);
+    }
 
+    // Sync + Enter checkpoint
+    inline bool SendFakeEnterCheckpoint(WORD vehicleId, float x, float y, float z, bool isRace) {
+        SAMP::SetInCheckpoint(true);
         bool syncOk = SendFakeVehicleSync(vehicleId, x, y, z);
-        bool rpcOk = false;
-        if (isRace) {
-            rpcOk = SendEnterRaceCheckpoint();
-        } else {
-            rpcOk = SendEnterCheckpoint();
-        }
-        
-        // Fix: Reset state immediately to prevent camera bugs during server-side spectate/freeze
+        bool rpcOk = isRace ? SendEnterRaceCheckpoint() : SendEnterCheckpoint();
         SAMP::SetInCheckpoint(false);
-        
         return syncOk && rpcOk;
+    }
+
+    // Double-enter exploit: Enter + Exit + Re-Enter (triggers delivery at same spot)
+    inline bool SendDoubleEnter(WORD vehicleId, float x, float y, float z, bool isRace) {
+        // 1. First enter (pickup)
+        SAMP::SetInCheckpoint(true);
+        SendFakeVehicleSync(vehicleId, x, y, z);
+        bool enter1 = isRace ? SendEnterRaceCheckpoint() : SendEnterCheckpoint();
+        SAMP::SetInCheckpoint(false);
+
+        // 2. Exit
+        bool exit1 = isRace ? SendLeaveRaceCheckpoint() : SendLeaveCheckpoint();
+
+        // 3. Re-enter (delivery at same position)
+        SAMP::SetInCheckpoint(true);
+        SendFakeVehicleSync(vehicleId, x, y, z);
+        bool enter2 = isRace ? SendEnterRaceCheckpoint() : SendEnterCheckpoint();
+        SAMP::SetInCheckpoint(false);
+
+        return enter1 && exit1 && enter2;
     }
 }

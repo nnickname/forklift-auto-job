@@ -3,8 +3,7 @@
  * Forklift Auto-Job Module
  * 
  * State machine:
- *   IDLE → WAITING_CHECKPOINT → TELEPORTING_PICKUP → WAITING_PICKUP
- *   → WAITING_RACE_CP → TELEPORTING_DELIVERY → WAITING_DELIVERY → IDLE
+ *   IDLE → WAITING_CHECKPOINT → TELEPORTING (DoubleEnter) → WAITING_DONE → IDLE
  *
  * Uses "Fake Enter" method:
  *   1. Detect checkpoint (from CGame memory or RPC hook)
@@ -24,17 +23,13 @@ namespace Forklift {
 
     enum class State {
         IDLE,
-        WAITING_CHECKPOINT,
-        TELEPORTING_PICKUP,
-        WAITING_PICKUP,
-        WAITING_RACE_CP,
-        TELEPORTING_DELIVERY,
-        WAITING_DELIVERY,
+        WAITING_CHECKPOINT,    // Looking for pickup CP
+        TELEPORTING,           // TP + DoubleEnter (pickup+delivery)
+        WAITING_DONE,          // Wait for server to process
     };
 
     struct Config {
-        DWORD pickupWaitMs     = 6500;
-        DWORD deliveryWaitMs   = 6500;
+        DWORD waitMs           = 6500;  // Max wait for server processing
         DWORD waitRandomMs     = 800;
         WORD  forkliftModelId  = 530;
         bool  checkVehicleModel = false;
@@ -44,7 +39,7 @@ namespace Forklift {
     static DWORD      s_WaitStart = 0;
     static Config     s_Config;
     static Game::Vec3 s_TargetPos = {0, 0, 0};
-    static bool       s_IsRace = false; // Track CP type
+    static bool       s_IsRace = false;
     static int        s_CycleCount = 0;
     static DWORD      s_ActualWaitMs = 0;
 
@@ -73,29 +68,22 @@ namespace Forklift {
     }
 
     static void LogState(const char* action) {
-        // File-only log (no chat messages to avoid interfering with admin detection)
         Game::Log("[Forklift] Ciclo #%d - %s", s_CycleCount, action);
     }
 
-    // Called externally when checkpoint state changes
+    // Called externally when checkpoint state changes (only care about pickup CPs now)
     static void OnCheckpointUpdate(bool active, Game::Vec3 pos, bool isRace) {
         if (!active) return;
-        
-        // Validate coordinates (reject garbage)
         if (pos.x == 0.0f && pos.y == 0.0f && pos.z == 0.0f) return;
         if (fabsf(pos.x) > 20000.0f || fabsf(pos.y) > 20000.0f) return;
 
-        if (s_State == State::WAITING_CHECKPOINT) {
+        if (s_State == State::WAITING_CHECKPOINT || s_State == State::WAITING_DONE) {
             s_TargetPos = pos;
             s_IsRace = isRace;
-        } else if (s_State == State::WAITING_RACE_CP || s_State == State::WAITING_PICKUP) {
-            s_TargetPos = pos;
-            s_IsRace = isRace;
-            s_State = State::WAITING_RACE_CP;
-        } else if (s_State == State::WAITING_DELIVERY) {
-            s_TargetPos = pos;
-            s_IsRace = isRace;
-            s_State = State::WAITING_CHECKPOINT;
+            if (s_State == State::WAITING_DONE) {
+                // Server already created next CP while we were waiting
+                s_State = State::WAITING_CHECKPOINT;
+            }
         }
     }
 
@@ -113,9 +101,9 @@ namespace Forklift {
             {
                 s_State = State::WAITING_CHECKPOINT;
                 s_CycleCount++;
-                s_TargetPos = {0, 0, 0}; // Reset target
+                s_TargetPos = {0, 0, 0};
                 s_IsRace = false;
-                LogState("Buscando checkpoint de recogida...");
+                LogState("Buscando CP...");
                 break;
             }
 
@@ -123,141 +111,77 @@ namespace Forklift {
             {
                 // Check if OnCheckpointUpdate set a valid target
                 if (s_TargetPos.x != 0.0f || s_TargetPos.y != 0.0f) {
-                    s_State = State::TELEPORTING_PICKUP;
+                    s_State = State::TELEPORTING;
                     char buf[128];
-                    snprintf(buf, sizeof(buf), "CP encontrado! (%.1f, %.1f, %.1f) Enviando sync...",
+                    snprintf(buf, sizeof(buf), "CP! (%.1f,%.1f,%.1f)",
                         s_TargetPos.x, s_TargetPos.y, s_TargetPos.z);
                     LogState(buf);
                 }
-                // Also try direct memory read as fallback
+                // Fallback: direct memory read
                 else if (Game::IsCheckpointActive()) {
                     Game::Vec3 cp = Game::GetCheckpointPosition();
                     if (fabsf(cp.x) > 1.0f || fabsf(cp.y) > 1.0f) {
                         s_TargetPos = cp;
-                        s_IsRace = false; // Memory read confirms normal CP
-                        s_State = State::TELEPORTING_PICKUP;
-                        char buf[128];
-                        snprintf(buf, sizeof(buf), "CP (mem) encontrado! (%.1f, %.1f) Sync...",
-                            s_TargetPos.x, s_TargetPos.y);
-                        LogState(buf);
+                        s_IsRace = false;
+                        s_State = State::TELEPORTING;
+                        LogState("CP (mem)!");
+                    }
+                }
+                else if (Game::IsRaceCheckpointActive()) {
+                    Game::Vec3 rcp = Game::GetRaceCheckpointPosition();
+                    if (fabsf(rcp.x) > 1.0f || fabsf(rcp.y) > 1.0f) {
+                        s_TargetPos = rcp;
+                        s_IsRace = true;
+                        s_State = State::TELEPORTING;
+                        LogState("RaceCP (mem)!");
                     }
                 }
                 break;
             }
 
-            case State::TELEPORTING_PICKUP:
+            case State::TELEPORTING:
             {
                 WORD vehID = SAMP::GetVehicleID();
                 if (vehID != 0xFFFF) {
-                    // 1. PHYSICAL TELEPORT (User Request: "move me directly")
+                    // 1. Teleport to CP
                     Game::TeleportVehicle(s_TargetPos.x, s_TargetPos.y, s_TargetPos.z + 1.0f);
-                    
-                    // 2. FAKE ENTER (Sync + RPC)
-                    bool ok = Sender::SendFakeEnterCheckpoint(vehID,
+
+                    // 2. DOUBLE ENTER: Enter + Exit + Re-Enter (pickup + delivery at same spot)
+                    bool ok = Sender::SendDoubleEnter(vehID,
                         s_TargetPos.x, s_TargetPos.y, s_TargetPos.z, s_IsRace);
-                    
-                    s_State = State::WAITING_PICKUP;
+
+                    s_State = State::WAITING_DONE;
                     s_WaitStart = now;
-                    s_ActualWaitMs = CalcWaitTime(s_Config.pickupWaitMs);
+                    s_ActualWaitMs = CalcWaitTime(s_Config.waitMs);
 
                     char buf[128];
-                    snprintf(buf, sizeof(buf), "TP + FakeEnter enviado (%s). Esperando %dms...",
+                    snprintf(buf, sizeof(buf), "TP + DoubleEnter (%s). Wait %dms max",
                         ok ? "OK" : "FAIL", s_ActualWaitMs);
                     LogState(buf);
                 } else {
                     if (!Game::IsPlayerInVehicle()) {
                         s_State = State::IDLE;
-                        LogState("Error: No en vehiculo. Reset.");
+                        LogState("Error: No vehicle. Reset.");
                     }
                 }
                 break;
             }
 
-            case State::WAITING_PICKUP:
+            case State::WAITING_DONE:
             {
-                // [STABILIZATION] Force vehicle to stay put during wait
                 Game::StabilizeVehicle();
+                DWORD elapsed = now - s_WaitStart;
 
-                if (now - s_WaitStart >= s_ActualWaitMs) {
-                    s_State = State::WAITING_RACE_CP;
-                    s_TargetPos = {0, 0, 0}; // Reset for next CP
+                // Smart early-exit: after 1s, if CP disappeared = server processed both
+                bool cpGone = (elapsed > 1000) &&
+                    !Game::IsCheckpointActive() && !Game::IsRaceCheckpointActive();
+
+                if (cpGone || elapsed >= s_ActualWaitMs) {
+                    char buf[128];
+                    snprintf(buf, sizeof(buf), "Ciclo #%d OK! (%dms)", s_CycleCount, (int)elapsed);
+                    LogState(buf);
+                    s_TargetPos = {0, 0, 0};
                     s_IsRace = false;
-                    LogState("Buscando checkpoint de entrega...");
-                }
-                break;
-            }
-
-            case State::WAITING_RACE_CP:
-            {
-                // Check cached target from hook
-                if (s_TargetPos.x != 0.0f || s_TargetPos.y != 0.0f) {
-                    s_State = State::TELEPORTING_DELIVERY;
-                    LogState("CP entrega encontrado. Enviando sync...");
-                }
-                // Fallback: check race checkpoint
-                else if (Game::IsRaceCheckpointActive()) {
-                    Game::Vec3 rcp = Game::GetRaceCheckpointPosition();
-                    if (fabsf(rcp.x) > 1.0f || fabsf(rcp.y) > 1.0f) {
-                        s_TargetPos = rcp;
-                        s_IsRace = true; // Race CP confirmed
-                        s_State = State::TELEPORTING_DELIVERY;
-                        LogState("Race CP (mem) encontrado!");
-                    }
-                }
-                // Fallback: check normal checkpoint
-                else if (Game::IsCheckpointActive()) {
-                    Game::Vec3 cp = Game::GetCheckpointPosition();
-                    if (fabsf(cp.x) > 1.0f || fabsf(cp.y) > 1.0f) {
-                        s_TargetPos = cp;
-                        s_IsRace = false; // Normal CP fallback
-                        s_State = State::TELEPORTING_DELIVERY;
-                        LogState("CP entrega (mem) encontrado!");
-                    }
-                }
-                break;
-            }
-
-            case State::TELEPORTING_DELIVERY:
-            {
-                if (fabsf(s_TargetPos.x) > 20000.0f || fabsf(s_TargetPos.y) > 20000.0f) {
-                    LogState("Error: Coords invalidas! Abortando.");
-                    s_State = State::IDLE;
-                    break;
-                }
-
-                WORD vehID = SAMP::GetVehicleID();
-                if (vehID != 0xFFFF) {
-                    // 1. PHYSICAL TELEPORT
-                    Game::TeleportVehicle(s_TargetPos.x, s_TargetPos.y, s_TargetPos.z + 1.0f);
-
-                    // 2. FAKE ENTER
-                    bool ok = Sender::SendFakeEnterCheckpoint(vehID,
-                        s_TargetPos.x, s_TargetPos.y, s_TargetPos.z, s_IsRace);
-                    
-                    s_State = State::WAITING_DELIVERY;
-                    s_WaitStart = now;
-                    s_ActualWaitMs = CalcWaitTime(s_Config.deliveryWaitMs);
-
-                    char buf[128];
-                    snprintf(buf, sizeof(buf), "TP + FakeEnter entrega (%s). Esperando %dms...",
-                        ok ? "OK" : "FAIL", s_ActualWaitMs);
-                    LogState(buf);
-                } else {
-                    LogState("Error: No VehicleID. Reset.");
-                    s_State = State::IDLE;
-                }
-                break;
-            }
-
-            case State::WAITING_DELIVERY:
-            {
-                // [STABILIZATION] Force vehicle to stay put during wait
-                Game::StabilizeVehicle();
-
-                if (now - s_WaitStart >= s_ActualWaitMs) {
-                    char buf[128];
-                    snprintf(buf, sizeof(buf), "Ciclo #%d completado!", s_CycleCount);
-                    LogState(buf);
                     s_State = State::IDLE;
                 }
                 break;
