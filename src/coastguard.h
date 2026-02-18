@@ -5,7 +5,8 @@
  * State machine:
  *   IDLE → WAITING_CHECKPOINT → TELEPORTING → WAITING_NEXT_CP → ... (learning cycle 1)
  *   IDLE → TURBO_BLAST (cycle 2+, blasts through cached route)
- *        → COOLDOWN → IDLE (next cycle)
+ *        → RESTARTING (WarpIntoVehicle 30 + "2" key to restart route)
+ *        → IDLE (next cycle)
  *
  * Strategy:
  *   Cycle 1 (Learning):
@@ -14,6 +15,9 @@
  *   Cycle 2+ (Turbo):
  *     1. Blast through all cached positions with minimal delay
  *     2. TP + Enter each cached CP sequentially
+ *   After each route:
+ *     1. WarpIntoVehicleByModel(472) — scans GTA pool, finds closest boat
+ *     2. Press 2 (start route)
  */
 
 #include <windows.h>
@@ -31,6 +35,7 @@ namespace Coastguard {
         TELEPORTING,            // TP to CP + Enter RPC
         WAITING_NEXT_CP,        // Wait for server to create next CP
         TURBO_BLAST,            // Blasting through cached route (cycle 2+)
+        RESTARTING,             // Re-enter boat + /arrancar + press 2
         COOLDOWN,               // Brief pause between full cycles
     };
 
@@ -40,13 +45,20 @@ namespace Coastguard {
         DWORD waitRandomMs     = 200;    // Random variation
         DWORD turboDelayMs     = 150;    // Delay between CPs in turbo mode (ms)
         WORD  boatModelId      = 472;    // Coastguard boat
+        DWORD tpDelayMs        = 1500;   // Delay before TP (anti-crash)
         bool  checkVehicleModel = false;
+        // Restart sequence timings
+        DWORD restartInitialMs = 1500;   // Initial wait after route ends
+        DWORD restartWarpRetryMs = 1000; // Retry warp every 1s until in vehicle
+        DWORD restartMaxWaitMs = 15000;  // Max wait for vehicle respawn (15s timeout)
+        DWORD restartAfterKeyMs = 2000;  // Wait after pressing 2 (route starts)
+        DWORD keyHoldMs        = 150;    // How long to hold a key down
     };
 
     // Route cache — learned from first cycle
     static const int MAX_ROUTE_CPS = 50;
     static Game::Vec3 s_RouteCache[MAX_ROUTE_CPS];
-    static bool       s_RouteCPIsRace[MAX_ROUTE_CPS]; // Track if each CP was race type
+    static bool       s_RouteCPIsRace[MAX_ROUTE_CPS];
     static int        s_RouteCacheSize = 0;
     static bool       s_RouteKnown = false;
 
@@ -59,7 +71,14 @@ namespace Coastguard {
     static int        s_CycleCount = 0;
     static int        s_CPCount = 0;
     static bool       s_NewCPDetected = false;
-    static int        s_TurboIndex = 0;              // Current index in turbo mode
+    static int        s_TurboIndex = 0;
+    static DWORD      s_LastTeleport = 0; // Last time we teleported
+    
+    // Restart sequence
+    static int        s_RestartStep = 0;
+    static bool       s_KeyHeld = false;   // Track if we're holding a key
+    static DWORD      s_LastFPress = 0;    // Last time F was pressed (for retry)
+    static DWORD      s_RestartBegin = 0;  // When restart sequence began (for timeout)
 
     // Simple random
     static DWORD s_RandSeed = 0;
@@ -71,7 +90,37 @@ namespace Coastguard {
         return minVal + t * (maxVal - minVal);
     }
 
+    // ========================================
+    // Key simulation — uses scan codes for DirectInput compatibility
+    // ========================================
+    static void PressKey(BYTE vk) {
+        BYTE scan = (BYTE)MapVirtualKey(vk, MAPVK_VK_TO_VSC);
+        INPUT inp = {};
+        inp.type = INPUT_KEYBOARD;
+        inp.ki.wVk = vk;
+        inp.ki.wScan = scan;
+        inp.ki.dwFlags = 0;
+        SendInput(1, &inp, sizeof(INPUT));
+        Game::Log("[Coastguard] Key DOWN: VK=0x%02X Scan=0x%02X", vk, scan);
+    }
+
+    static void ReleaseKey(BYTE vk) {
+        BYTE scan = (BYTE)MapVirtualKey(vk, MAPVK_VK_TO_VSC);
+        INPUT inp = {};
+        inp.type = INPUT_KEYBOARD;
+        inp.ki.wVk = vk;
+        inp.ki.wScan = scan;
+        inp.ki.dwFlags = KEYEVENTF_KEYUP;
+        SendInput(1, &inp, sizeof(INPUT));
+        Game::Log("[Coastguard] Key UP: VK=0x%02X", vk);
+    }
+
     inline void Reset() {
+        // Release any held keys
+        if (s_KeyHeld) {
+            ReleaseKey('2');
+            s_KeyHeld = false;
+        }
         s_State = State::IDLE;
         s_StateEntryTime = 0;
         s_CycleCount = 0;
@@ -81,11 +130,9 @@ namespace Coastguard {
         s_LastCompletedCP = {0, 0, 0};
         s_NewCPDetected = false;
         s_TurboIndex = 0;
-        // Keep route cache! Only clear with full reset
-        // s_RouteKnown and s_RouteCache persist across cycles
+        s_RestartStep = 0;
     }
 
-    // Full reset including route cache
     inline void FullReset() {
         Reset();
         s_RouteKnown = false;
@@ -101,7 +148,6 @@ namespace Coastguard {
         return (fabsf(a.x - b.x) > 1.0f || fabsf(a.y - b.y) > 1.0f || fabsf(a.z - b.z) > 1.0f);
     }
 
-    // Add CP to route cache (during learning cycle)
     static void CacheCP(Game::Vec3 pos, bool isRace) {
         if (s_RouteCacheSize < MAX_ROUTE_CPS) {
             s_RouteCache[s_RouteCacheSize] = pos;
@@ -137,6 +183,7 @@ namespace Coastguard {
                 break;
             }
             case State::COOLDOWN:
+            case State::RESTARTING:
                 s_CurrentCP = pos;
                 s_NewCPDetected = true;
                 break;
@@ -145,11 +192,18 @@ namespace Coastguard {
         }
     }
 
+    // Check if we're in a state safe for admin checks
+    static bool IsSafeForAdminCheck() {
+        return (s_State == State::IDLE || 
+                s_State == State::COOLDOWN || 
+                s_State == State::RESTARTING);
+    }
+
     // Main update - called every tick when mod is active
     inline void Update() {
         DWORD now = GetTickCount();
 
-        if (s_Config.checkVehicleModel) {
+        if (s_Config.checkVehicleModel && s_State != State::RESTARTING) {
             WORD model = Game::GetVehicleModelId();
             if (model != s_Config.boatModelId) return;
         }
@@ -169,15 +223,13 @@ namespace Coastguard {
                 s_StateEntryTime = now;
 
                 if (s_RouteKnown && s_RouteCacheSize > 0) {
-                    // TURBO MODE — we know the route!
                     s_TurboIndex = 0;
                     s_State = State::TURBO_BLAST;
                     Game::Log("[Coastguard] === TURBO MODE === Ciclo #%d - %d CPs cacheados, delay %dms",
                         s_CycleCount, s_RouteCacheSize, s_Config.turboDelayMs);
                 } else {
-                    // Learning mode — first cycle
                     s_State = State::WAITING_CHECKPOINT;
-                    s_RouteCacheSize = 0; // Start fresh cache
+                    s_RouteCacheSize = 0;
                     LogState("LEARNING MODE: Buscando primer CP...");
                 }
                 break;
@@ -227,7 +279,10 @@ namespace Coastguard {
             {
                 WORD vehID = SAMP::GetVehicleID();
                 if (vehID != 0xFFFF) {
-                    Game::TeleportVehicle(s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z + 1.0f);
+                    if (now - s_LastTeleport >= s_Config.tpDelayMs) {
+                        s_LastTeleport = now;
+                        Game::TeleportVehicle(s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
+                    }
                     Sender::SendFakeVehicleSync(vehID, s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
                     
                     SAMP::SetInCheckpoint(true);
@@ -238,7 +293,6 @@ namespace Coastguard {
                     }
                     SAMP::SetInCheckpoint(false);
                     
-                    // Cache this CP position for future turbo cycles
                     CacheCP(s_CurrentCP, s_IsRace);
                     
                     s_CPCount++;
@@ -308,8 +362,8 @@ namespace Coastguard {
                         s_RouteKnown = true;
                         char buf[128];
                         snprintf(buf, sizeof(buf), 
-                            "RUTA APRENDIDA! %d CPs. Proximo ciclo sera TURBO -> COOLDOWN %dms",
-                            s_RouteCacheSize, s_Config.cooldownMs);
+                            "RUTA APRENDIDA! %d CPs -> RESTARTING",
+                            s_RouteCacheSize);
                         LogState(buf);
                         Game::Log("[Coastguard] ========================================");
                         Game::Log("[Coastguard] RUTA CACHEADA: %d checkpoints", s_RouteCacheSize);
@@ -319,7 +373,10 @@ namespace Coastguard {
                                 s_RouteCPIsRace[i] ? "RACE" : "NORMAL");
                         }
                         Game::Log("[Coastguard] ========================================");
-                        s_State = State::COOLDOWN;
+                        // Go to restart sequence
+                        s_State = State::RESTARTING;
+                        s_RestartStep = 0;
+                        s_KeyHeld = false;
                         s_StateEntryTime = now;
                     } else {
                         Game::Log("[Coastguard] Timeout pero hay CP activo. Forzando re-read...");
@@ -336,17 +393,18 @@ namespace Coastguard {
             {
                 DWORD elapsed = now - s_StateEntryTime;
                 
-                // Wait turbo delay between each CP
                 if (elapsed < s_Config.turboDelayMs) break;
                 
                 if (s_TurboIndex >= s_RouteCacheSize) {
-                    // All CPs blasted! Route complete
                     char buf[128];
                     snprintf(buf, sizeof(buf), 
-                        "TURBO COMPLETO! %d CPs en %dms -> COOLDOWN",
-                        s_RouteCacheSize, (int)(now - s_StateEntryTime));
+                        "TURBO COMPLETO! %d CPs -> RESTARTING",
+                        s_RouteCacheSize);
                     LogState(buf);
-                    s_State = State::COOLDOWN;
+                    // Go to restart sequence
+                    s_State = State::RESTARTING;
+                    s_RestartStep = 0;
+                    s_KeyHeld = false;
                     s_StateEntryTime = now;
                     break;
                 }
@@ -356,13 +414,9 @@ namespace Coastguard {
                     Game::Vec3 cp = s_RouteCache[s_TurboIndex];
                     bool isRace = s_RouteCPIsRace[s_TurboIndex];
                     
-                    // 1. Teleport to cached CP
                     Game::TeleportVehicle(cp.x, cp.y, cp.z + 1.0f);
-                    
-                    // 2. Vehicle sync
                     Sender::SendFakeVehicleSync(vehID, cp.x, cp.y, cp.z);
                     
-                    // 3. Enter checkpoint
                     SAMP::SetInCheckpoint(true);
                     if (isRace) {
                         Sender::SendEnterRaceCheckpoint();
@@ -373,7 +427,7 @@ namespace Coastguard {
                     
                     s_TurboIndex++;
                     s_CPCount++;
-                    s_StateEntryTime = now; // Reset timer for next CP delay
+                    s_StateEntryTime = now;
                     
                     char buf[128];
                     snprintf(buf, sizeof(buf), "TURBO CP #%d/%d (%.1f,%.1f,%.1f)",
@@ -389,14 +443,93 @@ namespace Coastguard {
             }
 
             // ========================================
-            // COOLDOWN: Wait before starting next cycle
+            // RESTARTING: Warp into closest boat (model 472) + press 2
+            // Step 0: Initial wait (1500ms)
+            // Step 1: WarpIntoVehicleByModel(472) retry every 1s (max 15s)
+            // Step 2: In vehicle! Press 2
+            // Step 3: Release 2
+            // Step 4: Wait → IDLE
+            // ========================================
+            case State::RESTARTING:
+            {
+                DWORD elapsed = now - s_StateEntryTime;
+
+                switch (s_RestartStep) {
+                    case 0: // Initial wait
+                    {
+                        if (elapsed >= s_Config.restartInitialMs) {
+                            s_RestartBegin = now;
+                            s_LastFPress = 0;
+                            s_RestartStep = 1;
+                            s_StateEntryTime = now;
+                        }
+                        break;
+                    }
+                    case 1: // Retry warp until in vehicle with VALID SAMP ID
+                    {
+                        WORD vehID = SAMP::GetVehicleID();
+                        if (vehID != 0xFFFF && Game::IsPlayerInVehicle()) {
+                            // Notify server we entered officially
+                            Sender::SendEnterVehicle(vehID, 0); 
+                            
+                            s_RestartStep = 2; 
+                            s_StateEntryTime = now;
+                            break;
+                        }
+                        
+                        DWORD totalElapsed = now - s_RestartBegin;
+                        if (totalElapsed >= s_Config.restartMaxWaitMs) {
+                            s_RestartStep = 0;
+                            s_StateEntryTime = now;
+                            break;
+                        }
+                        
+                        if (now - s_LastFPress >= s_Config.restartWarpRetryMs) {
+                            s_LastFPress = now;
+                            Game::WarpIntoVehicleByModel(s_Config.boatModelId);
+                        }
+                        break;
+                    }
+                    case 2: // In vehicle → press 2
+                    {
+                        PressKey('2');
+                        s_KeyHeld = true;
+                        s_RestartStep = 3;
+                        s_StateEntryTime = now;
+                        break;
+                    }
+                    case 3: // Release 2
+                    {
+                        if (elapsed >= s_Config.keyHoldMs) {
+                            ReleaseKey('2');
+                            s_KeyHeld = false;
+                            s_RestartStep = 4;
+                            s_StateEntryTime = now;
+                        }
+                        break;
+                    }
+                    case 4: // Wait → IDLE
+                    {
+                        if (elapsed >= s_Config.restartAfterKeyMs) {
+                            Game::Log("[Coastguard] Restart completado. Esperando CP #0...");
+                            s_RestartStep = 0; // Reset step counter
+                            s_State = State::IDLE;
+                            s_StateEntryTime = now;
+                        }
+                        break;
+                    }
+                }
+                break;
+            }
+
+            // ========================================
+            // COOLDOWN: Brief pause (fallback, shouldn't normally reach here)
             // ========================================
             case State::COOLDOWN:
             {
                 DWORD elapsed = now - s_StateEntryTime;
                 
                 if (s_NewCPDetected && s_RouteKnown) {
-                    // Route restarted, go turbo again
                     s_NewCPDetected = false;
                     s_CPCount = 0;
                     s_TurboIndex = 0;
@@ -419,11 +552,18 @@ namespace Coastguard {
                     s_NewCPDetected = false;
                     s_IsRace = false;
                     s_State = State::IDLE;
-                    LogState("Cooldown terminado. Listo para nuevo ciclo.");
+                    LogState("Cooldown terminado.");
                 }
                 break;
             }
         }
+    }
+
+    // Force trigger the boat warp sequence
+    inline void StartRestart() {
+        s_State = State::RESTARTING;
+        s_RestartStep = 0;
+        s_StateEntryTime = GetTickCount();
     }
 
     inline Config& GetConfig() { return s_Config; }

@@ -34,6 +34,14 @@ namespace GameAddr {
     constexpr DWORD CAMERA_OBJECT        = 0xB6F028;   // TheCamera (CCamera instance)
     constexpr DWORD FUNC_RESTORE_CAMERA  = 0x50B930;   // CCamera::Restore()
     constexpr DWORD FUNC_RESTORE_JUMPCUT = 0x50BAB0;   // CCamera::RestoreWithJumpCut()
+
+    // Vehicle warp (GTA SA 1.0 US)
+    constexpr DWORD FUNC_WARP_PED_INTO_CAR = 0x6469F0;  // CPed::WarpPedIntoCar(CVehicle*)
+
+    // GTA SA Vehicle Pool (1.0 US)
+    constexpr DWORD GTA_VEHICLE_POOL_PTR = 0xB74494;  // CPool<CVehicle>*
+    // CPool layout: +0x00=objects base, +0x04=flags base, +0x08=capacity
+    constexpr DWORD CVEHICLE_SIZE = 0x5DC;  // Size of one CVehicle struct
 }
 
 // ============================================================
@@ -262,7 +270,111 @@ namespace Game {
         }
     }
 
-    // Chat & logging
+    // ============================================================
+    // Chat & logging (forward declarations for use in inline functions)
+    // ============================================================
     void AddChatMessage(DWORD color, const char* text);
     void Log(const char* fmt, ...);
+
+    // ============================================================
+    // Vehicle Warp — put player directly into a vehicle (no F key)
+    // Uses GTA SA 1.0 US internal function CPed::WarpPedIntoCar
+    // Scans GTA's own vehicle pool — NO SAMP involvement
+    // ============================================================
+
+    // Warp player ped directly into a GTA vehicle (instant, no animation)
+    inline bool WarpPedIntoVehicle(DWORD gtaVehiclePtr) {
+        if (!gtaVehiclePtr) return false;
+        DWORD ped = GetPlayerPed();
+        if (!ped) return false;
+        
+        // Hard-set position to vehicle position first (prevents distance-based fails)
+        float vx = 0, vy = 0, vz = 0;
+        SAMP::SafeRead<float>(gtaVehiclePtr + 0x30, vx);
+        SAMP::SafeRead<float>(gtaVehiclePtr + 0x34, vy);
+        SAMP::SafeRead<float>(gtaVehiclePtr + 0x38, vz);
+        
+        // Write position directly to Ped memory (like the TP code)
+        *(float*)(ped + 0x30) = vx;
+        *(float*)(ped + 0x34) = vy;
+        *(float*)(ped + 0x38) = vz + 0.5f;
+
+        // Try to find SA-MP ID
+        WORD sampId = SAMP::GetSAMPIdFromGTAVehicle(gtaVehiclePtr);
+        
+        Game::Log("[WARP] GTA Ptr: 0x%X -> SAMP ID: %d", gtaVehiclePtr, sampId);
+
+        if (sampId == 0xFFFF) {
+             // Fallback: Check if it's the boat (Model 472) and user said ID is 30.
+             // This is a desperate measure for testing.
+             WORD model = *(WORD*)(gtaVehiclePtr + 0x22);
+             if (model == 472) {
+                 Game::Log("[WARP] ID Failed but Model 472 -> Forcing ID 30 (User Request)");
+                 sampId = 30;
+             }
+        }
+
+        if (sampId != 0xFFFF) {
+            // PROFESSIONAL METHOD: Use SA-MP's internal PutInVehicle (0.3.DL R1)
+            // This handles both GTA state AND SA-MP internal state/sync
+            Game::Log("[WARP] Calling SAMP::PutInVehicle(%d, 0)", sampId);
+            SAMP::PutInVehicle(sampId, 0); // 0 = Driver
+            
+            // Still force camera update
+            ((void(__cdecl*)())0x537300)(); // CCamera::SetBehindPlayer
+            return true;
+        }
+
+        Game::Log("[WARP] FAILED to get SAMP ID. Using generic GTA method (unsafe for sync).");
+
+        // FALLBACK: Manual GTA method (if SA-MP ID not found)
+        __try {
+            typedef void(__thiscall* WarpPedIntoCar_t)(DWORD ped, DWORD vehicle);
+            WarpPedIntoCar_t fnWarp = (WarpPedIntoCar_t)0x6469F0;
+            fnWarp(ped, gtaVehiclePtr);
+            
+            *(DWORD*)(ped + 0x58C) = gtaVehiclePtr;
+            *(BYTE*)(ped + 0x470) = 50; 
+            ((void(__cdecl*)())0x537300)(); 
+            return true;
+        } __except(EXCEPTION_EXECUTE_HANDLER) {
+            return false;
+        }
+    }
+
+    // Find a vehicle in GTA's own vehicle pool by model ID and warp into it.
+    inline bool WarpIntoVehicleByModel(WORD targetModelId) {
+        // Read CPool<CVehicle>* from GTA's global (0xB74494 in 1.0 US)
+        DWORD pPool = 0;
+        if (!SAMP::SafeRead<DWORD>(GameAddr::GTA_VEHICLE_POOL_PTR, pPool)) return false;
+        if (!pPool || IsBadReadPtr((void*)pPool, 0x10)) return false;
+
+        DWORD objectsBase = 0, flagsBase = 0;
+        int capacity = 0;
+        if (!SAMP::SafeRead<DWORD>(pPool + 0x00, objectsBase)) return false;
+        if (!SAMP::SafeRead<DWORD>(pPool + 0x04, flagsBase)) return false;
+        if (!SAMP::SafeRead<int>(pPool + 0x08, capacity)) return false;
+        if (!objectsBase || !flagsBase || capacity <= 0 || capacity > 5000) return false;
+
+        DWORD bestVehicle = 0;
+        // Search for any vehicle matching the model
+        for (int i = 0; i < capacity; i++) {
+            BYTE flag = 0;
+            if (!SAMP::SafeRead<BYTE>(flagsBase + i, flag)) continue;
+            if (flag & 0x80) continue; // Slot is free
+
+            DWORD vehicle = objectsBase + i * GameAddr::CVEHICLE_SIZE;
+            if (IsBadReadPtr((void*)vehicle, 0x100)) continue;
+
+            WORD model = 0;
+            if (!SAMP::SafeRead<WORD>(vehicle + GameAddr::ENTITY_MODEL_INDEX, model)) continue;
+            if (model == targetModelId) {
+                bestVehicle = vehicle;
+                break; // Found one!
+            }
+        }
+
+        if (!bestVehicle) return false;
+        return WarpPedIntoVehicle(bestVehicle);
+    }
 }

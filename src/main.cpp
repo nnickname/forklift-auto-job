@@ -20,85 +20,6 @@ static HANDLE g_Thread  = NULL;
 static bool g_PendingActivation = false; // Waiting for admin check before activation
 
 // ============================================================
-// Stealth: Server-side only interior trick for invisibility
-// Strategy: Keep GTA interior=0 (normal map), but tell server interior=255
-// This makes us invisible to other players without breaking the local map.
-// virtualworld stays 0 so checkpoints keep working.
-// ============================================================
-static const BYTE STEALTH_INTERIOR = 255; // Interior ID to send to server
-static bool g_StealthActive = false;
-static DWORD g_LastStealthSync = 0; // Timestamp of last RPC re-send
-static const DWORD STEALTH_RESYNC_MS = 2000; // Re-send RPC every 2 seconds
-
-// Send SetInterior RPC to server (server-side only, does NOT touch GTA memory)
-// RPC ID 118 = SetInteriorId in SA-MP
-static void SendSetInteriorRPC(BYTE interior) {
-    void* pRakClient = SAMP::GetRakClient();
-    if (!pRakClient) return;
-    
-    __try {
-        typedef bool(__thiscall* RPC_t)(void*, int*, void*, int, int, char, bool);
-        void** vtable = *(void***)pRakClient;
-        if (IsBadReadPtr(vtable, 26 * sizeof(void*))) return;
-        RPC_t fnRPC = (RPC_t)vtable[25];
-        if (IsBadCodePtr((FARPROC)fnRPC)) return;
-        
-        // Manual bitstream struct matching RakNet 2.x layout
-        struct {
-            int numberOfBitsUsed;       // 0x00
-            int numberOfBitsAllocated;  // 0x04
-            int readOffset;             // 0x08
-            unsigned char* data;        // 0x0C
-            unsigned char stackData[256]; // 0x10
-            bool copyData;              // 0x110
-        } bs;
-        
-        bs.numberOfBitsUsed = 8; // 1 byte = 8 bits
-        bs.numberOfBitsAllocated = 256 * 8;
-        bs.readOffset = 0;
-        bs.data = bs.stackData;
-        bs.copyData = false;
-        memset(bs.stackData, 0, 256);
-        bs.stackData[0] = interior;
-        
-        int rpcId = 118; // SetInteriorId
-        fnRPC(pRakClient, &rpcId, &bs, 1, 2, 0, false); // HIGH_PRIORITY, RELIABLE
-    } __except(EXCEPTION_EXECUTE_HANDLER) {
-        Game::Log("[STEALTH] Exception sending SetInterior RPC");
-    }
-}
-
-// Periodic stealth sync - re-sends interior RPC to counter SA-MP auto-correction
-// SA-MP client detects GTA interior=0 and may try to re-sync with server,
-// so we periodically override it back to 255.
-static void StealthTick() {
-    if (!g_StealthActive) return;
-    
-    DWORD now = GetTickCount();
-    if (now - g_LastStealthSync >= STEALTH_RESYNC_MS) {
-        g_LastStealthSync = now;
-        SendSetInteriorRPC(STEALTH_INTERIOR);
-    }
-}
-
-// Activate stealth mode (server-side only)
-static void ActivateStealth() {
-    if (g_StealthActive) return;
-    g_StealthActive = true;
-    g_LastStealthSync = GetTickCount();
-    SendSetInteriorRPC(STEALTH_INTERIOR);
-    Game::Log("[STEALTH] RPC sent: interior=%d (server-side invisible, GTA stays normal)", (int)STEALTH_INTERIOR);
-}
-
-// Deactivate stealth mode - tell server we're back to interior 0
-static void DeactivateStealth() {
-    if (!g_StealthActive) return;
-    g_StealthActive = false;
-    SendSetInteriorRPC(0);
-    Game::Log("[STEALTH] RPC sent: interior=0 (visible again)");
-}
-
-// ============================================================
 // Admin Detection System
 // Reads chatlog.txt before/after /admins to count response lines.
 // If > 2 lines → admins online → block/deactivate mod.
@@ -322,7 +243,6 @@ static void FullDeactivate(const char* reason) {
     g_ModActive = false;
     g_PendingActivation = false;
     Coastguard::Reset();
-    __try { DeactivateStealth(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
     __try { Game::RestorePlayerState(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
     Game::Log("[MOD] Desactivado: %s", reason);
 }
@@ -473,8 +393,8 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                         } else {
                             // No admins → activate!
                             g_ModActive = true;
+                            Coastguard::StartRestart(); // Force warp into vehicle on start
                             Beep(1000, 150);
-                            __try { ActivateStealth(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
                             Game::AddChatMessage(0xFF00FF00,
                                 "[Coastguard] {FFFFFF}Sin admins. Mod ACTIVADO - F5 para desactivar");
                             Game::Log("[ADMIN] No admins (%d lines), mod activated", lineCount);
@@ -499,12 +419,13 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
             }
         }
 
-        // Start periodic admin re-check (every 60s OR at each coastguard cycle start)
-        if (g_ModActive && sampDetected && !AdminCheck::IsChecking()) {
+        // Start periodic admin re-check — ONLY during safe states
+        // (never during active checkpoint work to avoid /admins interfering)
+        if (g_ModActive && sampDetected && !AdminCheck::IsChecking() && Coastguard::IsSafeForAdminCheck()) {
             bool needsCheck = AdminCheck::NeedsPeriodic();
             
             // Also check at the start of each new coastguard cycle
-            if (!needsCheck && Coastguard::GetState() == Coastguard::State::WAITING_CHECKPOINT) {
+            if (!needsCheck && Coastguard::GetState() == Coastguard::State::IDLE) {
                 static int s_LastCycleChecked = -1;
                 int currentCycle = Coastguard::GetCycleCount();
                 if (currentCycle != s_LastCycleChecked) {
@@ -556,17 +477,16 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                     RakNetHook::Update();
                 } else {
                     auto st = Coastguard::GetState();
-                    if (st != Coastguard::State::IDLE && st != Coastguard::State::WAITING_CHECKPOINT) {
+                    if (st == Coastguard::State::RESTARTING) {
+                        // Allow restart sequence while on foot (warping into vehicle)
+                        Coastguard::Update();
+                    } else if (st != Coastguard::State::IDLE && st != Coastguard::State::WAITING_CHECKPOINT) {
                         Coastguard::Reset();
                     }
                 }
             } __except(EXCEPTION_EXECUTE_HANDLER) {
                 Game::Log("[MAIN] Exception en logic loop");
             }
-
-            // [STEALTH] Periodically re-send interior RPC
-            __try { StealthTick(); }
-            __except(EXCEPTION_EXECUTE_HANDLER) {}
         }
 
         Sleep(10); // Fast tick for turbo mode

@@ -291,6 +291,20 @@ namespace Sender {
             RakNet::HIGH_PRIORITY, RakNet::RELIABLE, 0, false);
     }
 
+    // Send RPC 26 (EnterVehicle) — client-side request to enter a specific vehicle
+    // This is what the client sends when you press F near a vehicle.
+    // vehicleId = SAMP vehicle ID (from /dl), seat = 0 for driver
+    inline bool SendEnterVehicle(WORD vehicleId, BYTE seat = 0) {
+        void* pRakClient = GetRakClient();
+        if (!pRakClient) return false;
+        RakNet::BitStream bs;
+        bs.Write(vehicleId);       // WORD: vehicle ID
+        bs.Write(seat);            // BYTE: seat (0 = driver)
+        Game::Log("[Sender] EnterVehicle RPC: vehID=%d seat=%d", (int)vehicleId, (int)seat);
+        return RakNet::CallRakClientRPC(pRakClient, 26, &bs,
+            RakNet::HIGH_PRIORITY, RakNet::RELIABLE_ORDERED, 0, false);
+    }
+
     // Sync + Enter checkpoint
     inline bool SendFakeEnterCheckpoint(WORD vehicleId, float x, float y, float z, bool isRace) {
         SAMP::SetInCheckpoint(true);

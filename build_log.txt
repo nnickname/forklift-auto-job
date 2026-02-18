@@ -1,0 +1,365 @@
+Versi??n de MSBuild 17.14.40+3e7442088 para .NET Framework
+
+  main.cpp
+  game.cpp
+C:\Users\barto\Desktop\samp-forklift-mod\src\samp.h(317,17): error C2601: 'GetSAMPIdFromGTAVehicle': las definiciones de funciones locales no son v??lidas [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Users\barto\Desktop\samp-forklift-mod\src\samp.h(275,58):
+      esta l??nea contiene un elemento '{' y no se ha encontrado su elemento de cierre
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(44,17): error C2323: 'SAMP::operator new': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(51,12): error C2039: "nothrow_t": no es un miembro de "std" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stddef.h(23,15):
+      vea la declaraci??n de 'std'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(51,12): error C2061: error de sintaxis: identificador 'nothrow_t' [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(49,17): warning C5043: "SAMP::operator new": la especificaci??n de la excepci??n no coincide con la declaraci??n anterior. [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(44,17):
+      vea la declaraci??n de 'SAMP::operator new'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(49,17): error C2323: 'SAMP::operator new': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(55,17): error C2323: 'SAMP::operator new[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(62,12): error C2039: "nothrow_t": no es un miembro de "std" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stddef.h(23,15):
+      vea la declaraci??n de 'std'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(62,12): error C2061: error de sintaxis: identificador 'nothrow_t' [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(60,17): warning C5043: "SAMP::operator new[]": la especificaci??n de la excepci??n no coincide con la declaraci??n anterior. [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(55,17):
+      vea la declaraci??n de 'SAMP::operator new[]'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(60,17): error C2323: 'SAMP::operator new[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(65,33): error C2323: 'SAMP::operator delete': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(71,12): error C2039: "nothrow_t": no es un miembro de "std" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stddef.h(23,15):
+      vea la declaraci??n de 'std'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(71,12): error C2061: error de sintaxis: identificador 'nothrow_t' [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(69,33): error C2323: 'SAMP::operator delete': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(74,33): error C2323: 'SAMP::operator delete[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(80,12): error C2039: "nothrow_t": no es un miembro de "std" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stddef.h(23,15):
+      vea la declaraci??n de 'std'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(80,12): error C2061: error de sintaxis: identificador 'nothrow_t' [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(78,33): error C2323: 'SAMP::operator delete[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(83,33): error C2323: 'SAMP::operator delete': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(88,33): error C2323: 'SAMP::operator delete[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(95,17): error C2323: 'SAMP::operator new': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(104,12): error C2039: "nothrow_t": no es un miembro de "std" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stddef.h(23,15):
+      vea la declaraci??n de 'std'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(104,12): error C2061: error de sintaxis: identificador 'nothrow_t' [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(101,17): warning C5043: "SAMP::operator new": la especificaci??n de la excepci??n no coincide con la declaraci??n anterior. [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(95,17):
+      vea la declaraci??n de 'SAMP::operator new'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(101,17): error C2323: 'SAMP::operator new': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(109,17): error C2323: 'SAMP::operator new[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(118,12): error C2039: "nothrow_t": no es un miembro de "std" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stddef.h(23,15):
+      vea la declaraci??n de 'std'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(118,12): error C2061: error de sintaxis: identificador 'nothrow_t' [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(115,17): warning C5043: "SAMP::operator new[]": la especificaci??n de la excepci??n no coincide con la declaraci??n anterior. [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(109,17):
+      vea la declaraci??n de 'SAMP::operator new[]'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(115,17): error C2323: 'SAMP::operator new[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(121,33): error C2323: 'SAMP::operator delete': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(129,12): error C2039: "nothrow_t": no es un miembro de "std" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stddef.h(23,15):
+      vea la declaraci??n de 'std'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(129,12): error C2061: error de sintaxis: identificador 'nothrow_t' [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(126,33): error C2323: 'SAMP::operator delete': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(132,33): error C2323: 'SAMP::operator delete[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(140,12): error C2039: "nothrow_t": no es un miembro de "std" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+      C:\Program Files (x86)\Windows Kits\10\Include\10.0.26100.0\ucrt\stddef.h(23,15):
+      vea la declaraci??n de 'std'
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(140,12): error C2061: error de sintaxis: identificador 'nothrow_t' [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(137,33): error C2323: 'SAMP::operator delete[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(143,33): error C2323: 'SAMP::operator delete': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(149,33): error C2323: 'SAMP::operator delete[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(162,28): error C2323: 'SAMP::operator new': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(169,44): error C2323: 'SAMP::operator delete': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(178,28): error C2323: 'SAMP::operator new[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new.h(185,44): error C2323: 'SAMP::operator delete[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new_debug.h(26,37): error C2323: 'SAMP::operator new': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new_debug.h(34,37): error C2323: 'SAMP::operator new[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new_debug.h(41,20): error C2323: 'SAMP::operator delete': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\vcruntime_new_debug.h(48,20): error C2323: 'SAMP::operator delete[]': las funciones new o delete de un operador no miembro no pueden declararse est??ticas o en un espacio de nombres distinto del espacio de nombres global [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cstdlib(24,18): error C2039: "fabs": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cstdlib(28,18): error C2039: "fabsf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cstdlib(32,18): error C2039: "fabsl": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(37,18): error C2039: "acosf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(41,18): error C2039: "acoshf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(45,18): error C2039: "asinf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(49,18): error C2039: "asinhf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(53,18): error C2039: "atanf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(57,18): error C2039: "atanhf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(61,18): error C2039: "atan2f": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(65,18): error C2039: "cbrtf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(89,18): error C2039: "cosf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(93,18): error C2039: "coshf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(97,18): error C2039: "erff": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(101,18): error C2039: "erfcf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(105,18): error C2039: "expf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(109,18): error C2039: "exp2f": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(113,18): error C2039: "expm1f": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(117,18): error C2039: "fabsf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(121,18): error C2039: "fdimf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(135,18): error C2039: "fmaf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(139,18): error C2039: "fmaxf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(143,18): error C2039: "fminf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(147,18): error C2039: "fmodf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(151,18): error C2039: "frexpf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(155,18): error C2039: "hypotf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(159,18): error C2039: "ilogbf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(163,18): error C2039: "ldexpf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(167,18): error C2039: "lgammaf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(171,18): error C2039: "llrintf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(175,18): error C2039: "llroundf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(179,18): error C2039: "logf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(183,18): error C2039: "log10f": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(187,18): error C2039: "log1pf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(191,18): error C2039: "log2f": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(195,18): error C2039: "logbf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(199,18): error C2039: "lrintf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(203,18): error C2039: "lroundf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(207,18): error C2039: "modff": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(211,18): error C2039: "nearbyintf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(215,18): error C2039: "nextafterf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(219,18): error C2039: "nexttowardf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(223,18): error C2039: "powf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(227,18): error C2039: "remainderf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(231,18): error C2039: "remquof": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(235,18): error C2039: "rintf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(249,18): error C2039: "scalblnf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(253,18): error C2039: "scalbnf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(257,18): error C2039: "sinf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(261,18): error C2039: "sinhf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(265,18): error C2039: "sqrtf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(269,18): error C2039: "tanf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(273,18): error C2039: "tanhf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(277,18): error C2039: "tgammaf": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(291,18): error C2039: "acosl": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(295,18): error C2039: "acoshl": no es un miembro de "`global namespace'" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\cmath(295,18): error C1003: el recuento de errores supera 100; se detiene la compilaci??n [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/main.cpp")
+  
+C:\Users\barto\Desktop\samp-forklift-mod\src\samp.h(317,17): error C2601: 'GetSAMPIdFromGTAVehicle': las definiciones de funciones locales no son v??lidas [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/game.cpp")
+      C:\Users\barto\Desktop\samp-forklift-mod\src\samp.h(275,58):
+      esta l??nea contiene un elemento '{' y no se ha encontrado su elemento de cierre
+  
+C:\Users\barto\Desktop\samp-forklift-mod\src\game.h(314,33): error C2039: "GetSAMPIdFromGTAVehicle": no es un miembro de "SAMP" [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/game.cpp")
+      C:\Users\barto\Desktop\samp-forklift-mod\src\samp.h(117,11):
+      vea la declaraci??n de 'SAMP'
+  
+C:\Users\barto\Desktop\samp-forklift-mod\src\game.h(314,33): error C3861: 'GetSAMPIdFromGTAVehicle': no se encontr?? el identificador [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/game.cpp")
+  
+C:\Users\barto\Desktop\samp-forklift-mod\src\samp.h(117,16): error C1075: "{": no se encontr?? ning??n token coincidente [C:\Users\barto\Desktop\samp-forklift-mod\build\samp-forklift-mod.vcxproj]
+  (compilando archivo de origen "../src/game.cpp")
+  
+  Generando c??digo...
