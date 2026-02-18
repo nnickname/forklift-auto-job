@@ -107,7 +107,7 @@ namespace AdminCheck {
     enum class State { IDLE, SNAPSHOT, SENDING, WAITING, EVALUATING };
 
     static const DWORD RESPONSE_WAIT_MS = 2500;    // Wait for server response
-    static const DWORD PERIODIC_MS = 120000;       // Re-check every 2 minutes
+    static const DWORD PERIODIC_MS = 60000;        // Re-check every 60 seconds
     static const int   MAX_SAFE_LINES = 2;         // <=2 lines = no admins
 
     static State s_State = State::IDLE;
@@ -451,13 +451,15 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
         }
 
         // ============================================
-        // ADMIN CHECK (pending activation or periodic)
+        // ADMIN CHECK - always process when a check is active
         // ============================================
-        if (sampDetected && (g_PendingActivation || (g_ModActive && AdminCheck::IsChecking()))) {
+        if (sampDetected && AdminCheck::IsChecking()) {
             __try {
                 bool adminsOnline = false;
                 int lineCount = 0;
-                if (AdminCheck::Update(adminsOnline, lineCount)) {
+                bool finished = AdminCheck::Update(adminsOnline, lineCount);
+                
+                if (finished) {
                     if (g_PendingActivation) {
                         // Initial check before activation
                         g_PendingActivation = false;
@@ -477,15 +479,18 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                                 "[Forklift] {FFFFFF}Sin admins. Mod ACTIVADO - F5 para desactivar");
                             Game::Log("[ADMIN] No admins (%d lines), mod activated", lineCount);
                         }
-                    } else {
-                        // Periodic check while active → EMERGENCY: deactivate + quit
+                    } else if (g_ModActive) {
+                        // Periodic check while active
                         if (adminsOnline) {
+                            // EMERGENCY: deactivate + quit
                             Beep(200, 300); Sleep(100); Beep(200, 300);
                             FullDeactivate("Admins detectados (periodico)");
                             Game::Log("[ADMIN] EMERGENCY: Admin detected while active! Sending /q");
-                            // Send /q to disconnect immediately
                             __try { SAMP::SendChat("/q"); }
                             __except(EXCEPTION_EXECUTE_HANDLER) {}
+                        } else {
+                            // No admins - all clear
+                            Game::Log("[ADMIN] Periodic check OK: no admins (%d lines)", lineCount);
                         }
                     }
                 }
@@ -494,10 +499,25 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
             }
         }
 
-        // Start periodic admin re-check every 2 minutes
-        if (g_ModActive && sampDetected && !AdminCheck::IsChecking() && AdminCheck::NeedsPeriodic()) {
-            AdminCheck::BeginCheck(true);
-            Game::Log("[ADMIN] Periodic admin check started");
+        // Start periodic admin re-check (every 60s OR at each forklift cycle start)
+        if (g_ModActive && sampDetected && !AdminCheck::IsChecking()) {
+            bool needsCheck = AdminCheck::NeedsPeriodic();
+            
+            // Also check at the start of each new forklift cycle
+            if (!needsCheck && Forklift::GetState() == Forklift::State::WAITING_CHECKPOINT) {
+                static int s_LastCycleChecked = -1;
+                int currentCycle = Forklift::GetCycleCount();
+                if (currentCycle != s_LastCycleChecked) {
+                    s_LastCycleChecked = currentCycle;
+                    needsCheck = true;
+                    Game::Log("[ADMIN] Cycle #%d start - triggering admin check", currentCycle);
+                }
+            }
+            
+            if (needsCheck) {
+                AdminCheck::BeginCheck(true);
+                Game::Log("[ADMIN] Periodic admin check started");
+            }
         }
 
         // ============================================
@@ -536,7 +556,7 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                     RakNetHook::Update();
                 } else {
                     auto st = Forklift::GetState();
-                    if (st == Forklift::State::TELEPORTING) {
+                    if (st != Forklift::State::IDLE && st != Forklift::State::WAITING_CHECKPOINT) {
                         Forklift::Reset();
                     }
                 }
