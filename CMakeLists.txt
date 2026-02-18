@@ -19,7 +19,7 @@ set(SOURCES
 set(HEADERS
     src/samp.h
     src/game.h
-    src/forklift.h
+    src/coastguard.h
 )
 
 # Build as shared library (DLL -> ASI)

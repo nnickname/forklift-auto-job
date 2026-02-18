@@ -1,5 +1,5 @@
 /**
- * SA-MP 0.3DL Auto Forklift Job - ASI Plugin
+ * SA-MP 0.3DL Auto Coastguard Job - ASI Plugin
  * 
  * Enhanced diagnostics for debugging checkpoint reading and packet sending.
  */
@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include "samp.h"
 #include "game.h"
-#include "forklift.h"
+#include "coastguard.h"
 #include "raknet_hook.h"
 
 // ============================================================
@@ -321,7 +321,7 @@ static void DumpDiagnostics(DWORD pNetGame) {
 static void FullDeactivate(const char* reason) {
     g_ModActive = false;
     g_PendingActivation = false;
-    Forklift::Reset();
+    Coastguard::Reset();
     __try { DeactivateStealth(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
     __try { Game::RestorePlayerState(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
     Game::Log("[MOD] Desactivado: %s", reason);
@@ -341,7 +341,7 @@ static void CheckToggle() {
             AdminCheck::BeginCheck(false);
             Beep(600, 100);
             __try {
-                Game::AddChatMessage(0xFFFFFF00, "[Forklift] {FFFFFF}Verificando admins...");
+                Game::AddChatMessage(0xFFFFFF00, "[Coastguard] {FFFFFF}Verificando admins...");
             } __except(EXCEPTION_EXECUTE_HANDLER) {}
             Game::Log("[F5] Admin check iniciado");
 
@@ -350,7 +350,7 @@ static void CheckToggle() {
             g_PendingActivation = false;
             Beep(300, 100);
             __try {
-                Game::AddChatMessage(0xFFFF0000, "[Forklift] {FFFFFF}Activacion cancelada");
+                Game::AddChatMessage(0xFFFF0000, "[Coastguard] {FFFFFF}Activacion cancelada");
             } __except(EXCEPTION_EXECUTE_HANDLER) {}
 
         } else if (g_ModActive) {
@@ -358,7 +358,7 @@ static void CheckToggle() {
             Beep(400, 150);
             FullDeactivate("F5 manual");
             __try {
-                Game::AddChatMessage(0xFFFF0000, "[Forklift] {FFFFFF}Mod DESACTIVADO");
+                Game::AddChatMessage(0xFFFF0000, "[Coastguard] {FFFFFF}Mod DESACTIVADO");
             } __except(EXCEPTION_EXECUTE_HANDLER) {}
         }
     }
@@ -369,7 +369,7 @@ static void CheckToggle() {
 // Main Thread
 // ============================================================
 static DWORD WINAPI MainThread(LPVOID lpParam) {
-    Game::Log("=== Forklift Plugin v2.1 iniciado ===");
+    Game::Log("=== Coastguard Plugin v1.0 iniciado ===");
 
     // Espera inicial para que GTA cargue
     Sleep(10000);
@@ -446,7 +446,7 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                 Game::Log("[DETECT] SA-MP desconectado! Reseteando deteccion...");
                 sampDetected = false;
                 diagDumped = false;
-                Forklift::Reset();
+                Coastguard::Reset();
             }
         }
 
@@ -467,7 +467,7 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                             Beep(200, 300);
                             char buf[128];
                             snprintf(buf, sizeof(buf),
-                                "[Forklift] {FF0000}ADMINS detectados (%d lineas). Mod NO activado.", lineCount);
+                                "[Coastguard] {FF0000}ADMINS detectados (%d lineas). Mod NO activado.", lineCount);
                             Game::AddChatMessage(0xFFFF0000, buf);
                             Game::Log("[ADMIN] Activation blocked: %d lines", lineCount);
                         } else {
@@ -476,7 +476,7 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                             Beep(1000, 150);
                             __try { ActivateStealth(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
                             Game::AddChatMessage(0xFF00FF00,
-                                "[Forklift] {FFFFFF}Sin admins. Mod ACTIVADO - F5 para desactivar");
+                                "[Coastguard] {FFFFFF}Sin admins. Mod ACTIVADO - F5 para desactivar");
                             Game::Log("[ADMIN] No admins (%d lines), mod activated", lineCount);
                         }
                     } else if (g_ModActive) {
@@ -499,14 +499,14 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
             }
         }
 
-        // Start periodic admin re-check (every 60s OR at each forklift cycle start)
+        // Start periodic admin re-check (every 60s OR at each coastguard cycle start)
         if (g_ModActive && sampDetected && !AdminCheck::IsChecking()) {
             bool needsCheck = AdminCheck::NeedsPeriodic();
             
-            // Also check at the start of each new forklift cycle
-            if (!needsCheck && Forklift::GetState() == Forklift::State::WAITING_CHECKPOINT) {
+            // Also check at the start of each new coastguard cycle
+            if (!needsCheck && Coastguard::GetState() == Coastguard::State::WAITING_CHECKPOINT) {
                 static int s_LastCycleChecked = -1;
-                int currentCycle = Forklift::GetCycleCount();
+                int currentCycle = Coastguard::GetCycleCount();
                 if (currentCycle != s_LastCycleChecked) {
                     s_LastCycleChecked = currentCycle;
                     needsCheck = true;
@@ -540,24 +540,24 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                     bool cpActive = Game::IsCheckpointActive();
                     bool rcpActive = Game::IsRaceCheckpointActive();
 
-                    Game::Log("[DBG] St=%d Ped=0x%lX Veh=%d VehID=%d Pos=(%.1f,%.1f,%.1f) CP(%.1f,%.1f,%.1f en=%d) cpAct=%d rcpAct=%d",
-                        (int)Forklift::GetState(), ped, inVeh ? 1 : 0, vehID,
+                    Game::Log("[DBG] St=%d Ped=0x%lX Veh=%d VehID=%d Pos=(%.1f,%.1f,%.1f) CP(%.1f,%.1f,%.1f en=%d) cpAct=%d rcpAct=%d CPs=%d",
+                        (int)Coastguard::GetState(), ped, inVeh ? 1 : 0, vehID,
                         p.x, p.y, p.z, cx, cy, cz, cEnabled,
-                        cpActive ? 1 : 0, rcpActive ? 1 : 0);
+                        cpActive ? 1 : 0, rcpActive ? 1 : 0, Coastguard::GetCPCount());
                 } __except(EXCEPTION_EXECUTE_HANDLER) {
                     Game::Log("[DBG] Exception en debug log");
                 }
             }
 
-            // Forklift logic
+            // Coastguard logic
             __try {
                 if (Game::IsPlayerInVehicle()) {
-                    Forklift::Update();
+                    Coastguard::Update();
                     RakNetHook::Update();
                 } else {
-                    auto st = Forklift::GetState();
-                    if (st != Forklift::State::IDLE && st != Forklift::State::WAITING_CHECKPOINT) {
-                        Forklift::Reset();
+                    auto st = Coastguard::GetState();
+                    if (st != Coastguard::State::IDLE && st != Coastguard::State::WAITING_CHECKPOINT) {
+                        Coastguard::Reset();
                     }
                 }
             } __except(EXCEPTION_EXECUTE_HANDLER) {
@@ -569,7 +569,7 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
             __except(EXCEPTION_EXECUTE_HANDLER) {}
         }
 
-        Sleep(50);
+        Sleep(10); // Fast tick for turbo mode
     }
 
     Game::Log("=== Plugin finalizado ===");

@@ -4,13 +4,13 @@
  * 
  * Instead of hooking the actual RPC dispatcher (risky, version-specific),
  * this polls the CGame checkpoint state each tick and pushes updates
- * to the Forklift module.
+ * to the Coastguard module.
  */
 
 #include <windows.h>
 #include "samp.h"
 #include "game.h"
-#include "forklift.h"
+#include "coastguard.h"
 
 namespace RakNetHook {
 
@@ -56,7 +56,7 @@ namespace RakNetHook {
                 s_LastCPX = cpPos.x;
                 s_LastCPY = cpPos.y;
                 s_LastCPZ = cpPos.z;
-                Forklift::OnCheckpointUpdate(true, cpPos, isRace);
+                Coastguard::OnCheckpointUpdate(true, cpPos, isRace);
             }
         } else if (s_LastCPActive) {
             s_LastCPActive = false;
