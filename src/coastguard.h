@@ -1,849 +1,529 @@
 #pragma once
 /**
  * Coastguard Auto-Job Module
- * 
- * State machine:
- *   IDLE → WAITING_CHECKPOINT → TELEPORTING → WAITING_NEXT_CP → ... (learning cycle 1)
- *   IDLE → TURBO_BLAST (cycle 2+, blasts through cached route)
- *        → RESTARTING (WarpIntoVehicle 30 + "2" key to restart route)
- *        → IDLE (next cycle)
  *
- * Strategy:
- *   Cycle 1 (Learning):
- *     1. Detect checkpoint, TP + Enter, wait for next, repeat
- *     2. Cache all CP positions as we go
- *   Cycle 2+ (Turbo):
- *     1. Blast through all cached positions with minimal delay
- *     2. TP + Enter each cached CP sequentially
- *   After each route:
- *     1. WarpIntoVehicleByModel(472) — scans GTA pool, finds closest boat
- *     2. Press 2 (start route)
+ * State machine:
+ *   IDLE → WAITING_CP → TELEPORTING → WAITING_NEXT → ... (learning cycle 1)
+ *   IDLE → TURBO (cycle 2+, blast through cached route) → RESTARTING → IDLE
+ *
+ * Learning: detect checkpoint, TP + enter, wait for next, repeat, cache route.
+ * Turbo:    blast through all cached CPs with minimal delay.
+ * Restart:  exit vehicle → TP to boat → press F → press 2 → IDLE.
  */
 
 #include <windows.h>
 #include <cmath>
-#include <stdio.h>
 #include "game.h"
-#include "samp.h"
-#include "raknet_sender.h"
+#include "net.h"
 
 namespace Coastguard {
 
+    // ════════════════════════════════════════════════════════
+    // Types & Constants
+    // ════════════════════════════════════════════════════════
+
     enum class State {
         IDLE,
-        WAITING_CHECKPOINT,     // Looking for next CP in sequence
-        TELEPORTING,            // TP to CP + Enter RPC
-        WAITING_NEXT_CP,        // Wait for server to create next CP
-        TURBO_BLAST,            // Blasting through cached route (cycle 2+)
-        RESTARTING,             // Re-enter boat + /arrancar + press 2
-        COOLDOWN,               // Brief pause between full cycles
+        WAITING_CP,     // Wait for checkpoint to appear
+        TELEPORTING,    // TP to CP + send enter RPC
+        WAITING_NEXT,   // Wait for next CP after entering
+        TURBO,          // Blast through cached route
+        RESTARTING      // Re-enter boat + start route
     };
 
-    struct Config {
-        DWORD nextCpWaitMs     = 1500;   // Max wait for next CP to appear (route done if timeout)
-        DWORD cooldownMs       = 1500;   // Cooldown between full cycles
-        DWORD waitRandomMs     = 200;    // Random variation
-        DWORD turboDelayMs     = 150;    // Delay between CPs in turbo mode (ms)
-        WORD  boatModelId      = 472;    // Coastguard boat
-        DWORD tpDelayMs        = 100;    // Delay before TP (anti-crash)
-        bool  checkVehicleModel = false;
-        // Restart sequence timings
-        DWORD restartInitialMs = 1500;   // Initial wait after route ends
-        DWORD restartWarpRetryMs = 1000; // Retry warp every 1s until in vehicle
-        DWORD restartMaxWaitMs = 15000;  // Max wait for vehicle respawn (15s timeout)
-        DWORD restartAfterKeyMs = 2000;  // Wait after pressing 2 (route starts)
-        DWORD keyHoldMs        = 150;    // How long to hold a key down
-    };
+    // Boat spawn (Coastguard dock)
+    static constexpr WORD  BOAT_MODEL   = 472;
+    static constexpr float BOAT_X       = 719.1288f;
+    static constexpr float BOAT_Y       = -1698.4248f;
+    static constexpr float BOAT_Z       = 1.7874f;
+    static constexpr float BOAT_HEADING = 190.97f;
 
-    // Route cache — learned from first cycle
-    static const int MAX_ROUTE_CPS = 150;
-    static Game::Vec3 s_RouteCache[MAX_ROUTE_CPS];
-    static bool       s_RouteCPIsRace[MAX_ROUTE_CPS];
-    static int        s_RouteCacheSize = 0;
-    static bool       s_RouteKnown = false;
+    // Timings (ms)
+    static constexpr DWORD TURBO_DELAY   = 150;   // Between CPs in turbo
+    static constexpr DWORD NEXT_CP_WAIT  = 1500;  // Max wait for next CP
+    static constexpr DWORD RESTART_INIT  = 1500;  // Initial wait after route ends
+    static constexpr DWORD RESTART_MAX   = 15000; // Max wait for F entry
+    static constexpr DWORD F_RETRY       = 1000;  // Retry F press interval
+    static constexpr DWORD KEY_HOLD      = 150;   // Key hold duration
+    static constexpr DWORD AFTER_KEY2    = 2000;  // Wait after pressing 2
 
-    static State      s_State = State::IDLE;
-    static DWORD      s_StateEntryTime = 0;
-    static Config     s_Config;
-    static Game::Vec3 s_CurrentCP = {0, 0, 0};
-    static Game::Vec3 s_LastCompletedCP = {0, 0, 0};
-    static bool       s_IsRace = false;
-    static int        s_CycleCount = 0;
-    static int        s_CPCount = 0;
-    static bool       s_NewCPDetected = false;
-    static int        s_TurboIndex = 0;
-    static DWORD      s_LastTeleport = 0; // Last time we teleported
-    
-    // Restart sequence
-    static int        s_RestartStep = 0;
-    static bool       s_KeyHeld = false;   // Track if we're holding a key
-    static DWORD      s_LastFPress = 0;    // Last time F was pressed (for retry)
-    static DWORD      s_RestartBegin = 0;  // When restart sequence began (for timeout)
-    static WORD       s_KnownVehID = 0xFFFF; // Last confirmed SAMP vehicle ID from warp
-    static DWORD      s_LastKeepAlive = 0;   // Last time we sent an incar keepalive sync
+    static constexpr int MAX_ROUTE = 150;
 
-    // Simple random
-    // Returns SAMP vehicle ID if valid; otherwise re-patches SAMP state with
-    // s_KnownVehID and returns it. Falls back to 0xFFFF only when not in vehicle.
-    static WORD GetActiveVehID() {
-        WORD sampID = SAMP::GetVehicleID();
-        if (sampID != 0xFFFF) {
-            s_KnownVehID = sampID; // Keep cached ID up-to-date
-            return sampID;
+    // ════════════════════════════════════════════════════════
+    // State variables
+    // ════════════════════════════════════════════════════════
+
+    static State s_State     = State::IDLE;
+    static DWORD s_StateTime = 0;
+    static int   s_Cycle     = 0;
+    static int   s_CPCount   = 0;
+
+    // Route cache
+    static Vec3  s_Route[MAX_ROUTE];
+    static bool  s_RouteRace[MAX_ROUTE];
+    static int   s_RouteSize  = 0;
+    static bool  s_RouteKnown = false;
+    static int   s_TurboIdx   = 0;
+
+    // Current CP tracking
+    static Vec3  s_CurCP  = {0, 0, 0};
+    static Vec3  s_LastCP  = {0, 0, 0};
+    static bool  s_IsRace  = false;
+    static WORD  s_KnownVeh = 0xFFFF;
+
+    // Restart
+    static int   s_RestartStep   = 0;
+    static bool  s_KeyHeld       = false;
+    static DWORD s_RestartBegin  = 0;
+    static DWORD s_LastFPress    = 0;
+    static bool  s_FDown         = false;
+    static DWORD s_FDownAt       = 0;
+
+    // Same-position retry counter (WAITING_NEXT)
+    static int   s_SamePosRetry  = 0;
+
+    // ════════════════════════════════════════════════════════
+    // Helpers
+    // ════════════════════════════════════════════════════════
+
+    static bool IsDifferent(Vec3 a, Vec3 b) {
+        return fabsf(a.x - b.x) > 1.0f || fabsf(a.y - b.y) > 1.0f || fabsf(a.z - b.z) > 1.0f;
+    }
+
+    static bool IsValidPos(float x, float y) {
+        return !(fabsf(x) < 1.0f && fabsf(y) < 1.0f) && fabsf(x) < 20000.0f && fabsf(y) < 20000.0f;
+    }
+
+    static void CacheCP(Vec3 pos, bool isRace) {
+        if (s_RouteSize > 0 && !IsDifferent(pos, s_Route[s_RouteSize - 1])) return;
+        if (s_RouteSize < MAX_ROUTE) {
+            s_Route[s_RouteSize] = pos;
+            s_RouteRace[s_RouteSize] = isRace;
+            s_RouteSize++;
+            Game::Log("[CG] Cached CP #%d (%.1f,%.1f,%.1f)", s_RouteSize, pos.x, pos.y, pos.z);
         }
-        // SAMP lost track of us — re-patch if we're still in a GTA vehicle
-        if (!Game::IsPlayerInVehicle()) return 0xFFFF;
-        if (s_KnownVehID == 0xFFFF) {
-            // Try to discover via vehicle pool scan
-            DWORD gtaVeh = Game::GetPlayerVehicle();
-            if (gtaVeh) {
-                WORD found = SAMP::GetSAMPIdFromGTAVehicle(gtaVeh);
-                if (found != 0xFFFF) s_KnownVehID = found;
+    }
+
+    // Get reliable SAMP vehicle ID, patching state if needed
+    static WORD GetActiveVehID() {
+        WORD id = SAMP::GetVehicleID();
+        if (id != 0xFFFF) { s_KnownVeh = id; return id; }
+        if (!Game::IsInVehicle()) return 0xFFFF;
+        if (s_KnownVeh == 0xFFFF) {
+            DWORD gta = Game::GetPlayerVehicle();
+            if (gta) {
+                WORD found = SAMP::FindVehicleID(gta);
+                if (found != 0xFFFF) s_KnownVeh = found;
             }
         }
-        if (s_KnownVehID == 0xFFFF) return 0xFFFF;
-        // Re-patch SAMP local player state
-        DWORD pLocal = SAMP::GetLocalPlayer();
-        if (pLocal && !IsBadWritePtr((void*)(pLocal + SAMPOffsets::LOCALPLAYER_VEHICLEID), 4)) {
-            *(WORD*)(pLocal + SAMPOffsets::LOCALPLAYER_VEHICLEID) = s_KnownVehID;
-            *(WORD*)(pLocal + 0x96) = s_KnownVehID; // m_incarData.m_nVehicle
+        if (s_KnownVeh != 0xFFFF) {
+            SAMP::PatchVehicleID(s_KnownVeh);
         }
-        return s_KnownVehID;
+        return s_KnownVeh;
     }
 
-    static DWORD s_RandSeed = 0;
-    static float RandomFloat(float minVal, float maxVal) {
-        if (s_RandSeed == 0) s_RandSeed = GetTickCount();
-        s_RandSeed = s_RandSeed * 214013 + 2531011;
-        DWORD r = (s_RandSeed >> 16) & 0x7FFF;
-        float t = (float)r / 32767.0f;
-        return minVal + t * (maxVal - minVal);
+    // Poll CGame for active checkpoint
+    static bool PollCheckpoint(Vec3& out, bool& outRace) {
+        if (SAMP::IsCheckpointActive()) {
+            float x = 0, y = 0, z = 0;
+            SAMP::GetCheckpointPos(x, y, z);
+            if (IsValidPos(x, y)) { out = {x, y, z}; outRace = false; return true; }
+        }
+        if (SAMP::IsRaceCheckpointActive()) {
+            float x = 0, y = 0, z = 0;
+            SAMP::GetRaceCheckpointPos(x, y, z);
+            if (IsValidPos(x, y)) { out = {x, y, z}; outRace = true; return true; }
+        }
+        return false;
     }
 
-    // ========================================
-    // Key simulation — uses scan codes for DirectInput compatibility
-    // ========================================
-    static void PressKey(BYTE vk) {
-        BYTE scan = (BYTE)MapVirtualKey(vk, MAPVK_VK_TO_VSC);
-        INPUT inp = {};
-        inp.type = INPUT_KEYBOARD;
-        inp.ki.wVk = vk;
-        inp.ki.wScan = scan;
-        inp.ki.dwFlags = 0;
-        SendInput(1, &inp, sizeof(INPUT));
-        Game::Log("[Coastguard] Key DOWN: VK=0x%02X Scan=0x%02X", vk, scan);
+    // Teleport + enter checkpoint (core action)
+    static void DoTeleportAndEnter(Vec3 cp, bool isRace, WORD vehID) {
+        SAMP::RestoreCamera();
+        Game::RestoreGTACamera();
+        Game::TeleportVehicle(cp.x, cp.y, cp.z);
+        Net::SendVehicleSync(vehID, cp.x, cp.y, cp.z);
+        if (isRace) Net::SendEnterRaceCheckpoint();
+        else        Net::SendEnterCheckpoint();
     }
 
-    static void ReleaseKey(BYTE vk) {
-        BYTE scan = (BYTE)MapVirtualKey(vk, MAPVK_VK_TO_VSC);
-        INPUT inp = {};
-        inp.type = INPUT_KEYBOARD;
-        inp.ki.wVk = vk;
-        inp.ki.wScan = scan;
-        inp.ki.dwFlags = KEYEVENTF_KEYUP;
-        SendInput(1, &inp, sizeof(INPUT));
-        Game::Log("[Coastguard] Key UP: VK=0x%02X", vk);
-    }
+    // ════════════════════════════════════════════════════════
+    // Public Interface
+    // ════════════════════════════════════════════════════════
+
+    inline State GetState() { return s_State; }
+    inline int GetCPCount() { return s_CPCount; }
 
     inline void Reset() {
-        // Release any held keys
-        if (s_KeyHeld) {
-            ReleaseKey('2');
-            s_KeyHeld = false;
-        }
+        if (s_KeyHeld) { Game::ReleaseKey('2'); s_KeyHeld = false; }
+        if (s_FDown) { Game::ReleaseKey('F'); s_FDown = false; }
         s_State = State::IDLE;
-        s_StateEntryTime = 0;
-        s_CycleCount = 0;
+        s_Cycle = 0;
         s_CPCount = 0;
-        s_IsRace = false;
-        s_CurrentCP = {0, 0, 0};
-        s_LastCompletedCP = {0, 0, 0};
-        s_NewCPDetected = false;
-        s_TurboIndex = 0;
         s_RestartStep = 0;
+        s_KnownVeh = 0xFFFF;
+        s_SamePosRetry = 0;
     }
 
     inline void FullReset() {
         Reset();
         s_RouteKnown = false;
-        s_RouteCacheSize = 0;
+        s_RouteSize = 0;
     }
 
-    static void LogState(const char* action) {
-        Game::Log("[Coastguard] Ciclo #%d CP #%d - %s (State=%d)", 
-            s_CycleCount, s_CPCount, action, (int)s_State);
-    }
-
-    static bool IsDifferentPosition(Game::Vec3 a, Game::Vec3 b) {
-        return (fabsf(a.x - b.x) > 1.0f || fabsf(a.y - b.y) > 1.0f || fabsf(a.z - b.z) > 1.0f);
-    }
-
-    static void CacheCP(Game::Vec3 pos, bool isRace) {
-        // Skip consecutive duplicates (same position entered twice due to server delay)
-        if (s_RouteCacheSize > 0 && !IsDifferentPosition(pos, s_RouteCache[s_RouteCacheSize - 1])) {
-            Game::Log("[Coastguard] CacheCP: duplicado ignorado (%.1f,%.1f,%.1f)", pos.x, pos.y, pos.z);
-            return;
-        }
-        if (s_RouteCacheSize < MAX_ROUTE_CPS) {
-            s_RouteCache[s_RouteCacheSize] = pos;
-            s_RouteCPIsRace[s_RouteCacheSize] = isRace;
-            s_RouteCacheSize++;
-            Game::Log("[Coastguard] Ruta cacheada: CP #%d (%.1f,%.1f,%.1f) %s", 
-                s_RouteCacheSize, pos.x, pos.y, pos.z, isRace ? "RACE" : "NORMAL");
-        } else {
-            Game::Log("[Coastguard] WARN: cache lleno (%d), CP descartado (%.1f,%.1f,%.1f)",
-                MAX_ROUTE_CPS, pos.x, pos.y, pos.z);
-        }
-    }
-
-    // Called externally when checkpoint state changes
-    static void OnCheckpointUpdate(bool active, Game::Vec3 pos, bool isRace) {
-        if (!active) return;
-        // Reject near-origin positions — covers exact (0,0,0) AND cases where only
-        // Z has a tiny residue while X/Y are still unwritten (race condition in SA-MP).
-        // No valid GTA:SA coastguard CP will ever have both X and Y within 1.0 of origin.
-        if (fabsf(pos.x) < 1.0f && fabsf(pos.y) < 1.0f) return;
-        if (fabsf(pos.x) > 20000.0f || fabsf(pos.y) > 20000.0f) return;
-
-        s_IsRace = isRace;
-
-        switch (s_State) {
-            case State::WAITING_CHECKPOINT:
-                s_CurrentCP = pos;
-                s_NewCPDetected = true;
-                break;
-            case State::WAITING_NEXT_CP:
-            {
-                if (IsDifferentPosition(pos, s_LastCompletedCP)) {
-                    s_CurrentCP = pos;
-                    s_NewCPDetected = true;
-                    char buf[128];
-                    snprintf(buf, sizeof(buf), "Nuevo CP detectado! (%.1f,%.1f,%.1f)", pos.x, pos.y, pos.z);
-                    LogState(buf);
-                }
-                break;
-            }
-            case State::COOLDOWN:
-            case State::RESTARTING:
-                s_CurrentCP = pos;
-                s_NewCPDetected = true;
-                break;
-            default:
-                break;
-        }
-    }
-
-    // Check if we're in a state safe for admin checks
-    static bool IsSafeForAdminCheck() {
-        return (s_State == State::IDLE || 
-                s_State == State::COOLDOWN || 
-                s_State == State::RESTARTING);
-    }
-
-    // Main update - called every tick when mod is active
-    inline void Update() {
-        DWORD now = GetTickCount();
-
-        // Periodic SAMP camera restore — the server sends InterpolateCamera /
-        // AttachCameraToObject RPCs at each checkpoint which call TakeControl()
-        // internally and freeze the camera. We must call CCamera::Restore() on
-        // the SAMP camera object periodically to undo this while the mod is active.
-        if (s_State != State::IDLE) {
-            static DWORD s_LastCameraRestoreTime = 0;
-            if (now - s_LastCameraRestoreTime > 1500) {
-                s_LastCameraRestoreTime = now;
-                SAMP::RestoreSAMPCamera();
-            }
-        }
-
-        if (s_Config.checkVehicleModel && s_State != State::RESTARTING) {
-            WORD model = Game::GetVehicleModelId();
-            if (model != s_Config.boatModelId) return;
-        }
-
-        switch (s_State) {
-            // ========================================
-            // IDLE: Start new cycle
-            // ========================================
-            case State::IDLE:
-            {
-                s_CycleCount++;
-                s_CPCount = 0;
-                s_CurrentCP = {0, 0, 0};
-                s_LastCompletedCP = {0, 0, 0};
-                s_NewCPDetected = false;
-                s_IsRace = false;
-                s_StateEntryTime = now;
-
-                if (s_RouteKnown && s_RouteCacheSize > 0) {
-                    s_TurboIndex = 0;
-                    s_State = State::TURBO_BLAST;
-                    Game::Log("[Coastguard] === TURBO MODE === Ciclo #%d - %d CPs cacheados, delay %dms",
-                        s_CycleCount, s_RouteCacheSize, s_Config.turboDelayMs);
-                } else {
-                    s_State = State::WAITING_CHECKPOINT;
-                    s_RouteCacheSize = 0;
-                    LogState("LEARNING MODE: Buscando primer CP...");
-                }
-                break;
-            }
-
-            // ========================================
-            // WAITING_CHECKPOINT: Wait for first CP (learning mode)
-            // ========================================
-            case State::WAITING_CHECKPOINT:
-            {
-                DWORD elapsed = now - s_StateEntryTime;
-
-                // Keep SAMP vehicle state patched + send periodic incar keepalive
-                WORD keepVehID = GetActiveVehID();
-                if (keepVehID != 0xFFFF && now - s_LastKeepAlive >= 300) {
-                    s_LastKeepAlive = now;
-                    Game::Vec3 p = Game::GetEntityPosition(Game::GetPlayerVehicle());
-                    Sender::SendFakeVehicleSync(keepVehID, p.x, p.y, p.z, 0);
-                }
-
-                // Wait 1500ms before accepting any CP — lets server clear the previous
-                // cycle's checkpoint so we don't grab a stale (0,0,0) position.
-                if (elapsed < 1500) {
-                    s_NewCPDetected = false; // discard anything that arrived too early
-                    break;
-                }
-
-                if (s_NewCPDetected) {
-                    // Extra safety: discard if coords are still near-origin
-                    if (fabsf(s_CurrentCP.x) < 1.0f && fabsf(s_CurrentCP.y) < 1.0f) {
-                        s_NewCPDetected = false;
-                        Game::Log("[Coastguard] WARN: s_NewCPDetected pero CurrentCP near-origin (%.2f,%.2f,%.2f) - descartado",
-                            s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
-                        break;
-                    }
-                    s_State = State::TELEPORTING;
-                    s_StateEntryTime = now;
-                    s_NewCPDetected = false;
-                    char buf[128];
-                    snprintf(buf, sizeof(buf), "CP encontrado! (%.1f,%.1f,%.1f)",
-                        s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
-                    LogState(buf);
-                }
-                else if (Game::IsCheckpointActive()) {
-                    Game::Vec3 cp = Game::GetCheckpointPosition();
-                    if (fabsf(cp.x) > 0.1f || fabsf(cp.y) > 0.1f) {
-                        s_CurrentCP = cp;
-                        s_IsRace = false;
-                        s_State = State::TELEPORTING;
-                        s_StateEntryTime = now;
-                        LogState("CP (mem)!");
-                    }
-                }
-                else if (Game::IsRaceCheckpointActive()) {
-                    Game::Vec3 rcp = Game::GetRaceCheckpointPosition();
-                    if (fabsf(rcp.x) > 0.1f || fabsf(rcp.y) > 0.1f) {
-                        s_CurrentCP = rcp;
-                        s_IsRace = true;
-                        s_State = State::TELEPORTING;
-                        s_StateEntryTime = now;
-                        LogState("RaceCP (mem)!");
-                    }
-                }
-                // ---- timed fallback ----
-                // If we've been waiting > 2s, rcpAct/cpAct is still true,
-                // but the memory read keeps returning (0,0,0), force it anyway.
-                // This handles mis-parsed positions while guaranteeing progress.
-                else {
-                    DWORD waited = now - s_StateEntryTime;
-                    if (waited >= 2000 && waited % 2000 < 100) { // log every 2s
-                        bool cpA = Game::IsCheckpointActive();
-                        bool rcpA = Game::IsRaceCheckpointActive();
-                        Game::Vec3 rcp2 = Game::GetRaceCheckpointPosition();
-                        Game::Log("[Coastguard] WAIT_CP timeout: cpA=%d rcpA=%d rcp=(%.2f,%.2f,%.2f)",
-                            cpA?1:0, rcpA?1:0, rcp2.x, rcp2.y, rcp2.z);
-                    }
-                }
-                break;
-            }
-
-            // ========================================
-            // TELEPORTING: TP to CP + Enter (learning mode)
-            // ========================================
-            case State::TELEPORTING:
-            {
-                // Last-resort guard — should never fire if upper filters work, but
-                // if somehow a near-origin position made it here, reset instead of crashing.
-                if (fabsf(s_CurrentCP.x) < 1.0f && fabsf(s_CurrentCP.y) < 1.0f) {
-                    Game::Log("[Coastguard] ERROR TELEPORTING: CurrentCP near-origin (%.2f,%.2f,%.2f) - reset",
-                        s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
-                    s_State = State::IDLE;
-                    break;
-                }
-                WORD vehID = GetActiveVehID();
-                if (vehID != 0xFFFF) {
-                    if (now - s_LastTeleport >= s_Config.tpDelayMs) {
-                        s_LastTeleport = now;
-                        Game::TeleportVehicle(s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
-                    }
-                    Sender::SendFakeVehicleSync(vehID, s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
-                    
-                    SAMP::SetInCheckpoint(true);
-                    if (s_IsRace) {
-                        Sender::SendEnterRaceCheckpoint();
-                    } else {
-                        Sender::SendEnterCheckpoint();
-                    }
-                    SAMP::SetInCheckpoint(false);
-                    
-                    CacheCP(s_CurrentCP, s_IsRace);
-                    
-                    s_CPCount++;
-                    s_LastCompletedCP = s_CurrentCP;
-                    s_NewCPDetected = false;
-                    s_State = State::WAITING_NEXT_CP;
-                    s_StateEntryTime = now;
-                    
-                    char buf[128];
-                    snprintf(buf, sizeof(buf), "LEARN: TP + Enter CP #%d (%.1f,%.1f,%.1f)",
-                        s_CPCount, s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
-                    LogState(buf);
-                } else {
-                    if (!Game::IsPlayerInVehicle()) {
-                        s_State = State::IDLE;
-                        LogState("Error: No vehicle. Reset.");
-                    }
-                }
-                break;
-            }
-
-            // ========================================
-            // WAITING_NEXT_CP: Wait for next CP (learning mode)
-            // ========================================
-            case State::WAITING_NEXT_CP:
-            {
-                DWORD elapsed = now - s_StateEntryTime;
-
-                // If the server kicked us out of the vehicle, the route ended.
-                // Don't wait for the timeout — go to RESTARTING immediately.
-                if (!Game::IsPlayerInVehicle() && SAMP::GetVehicleID() == 0xFFFF) {
-                    s_RouteKnown = true;
-                    char buf[128];
-                    snprintf(buf, sizeof(buf),
-                        "Expulsado de vehiculo = ruta terminada! %d CPs -> RESTARTING",
-                        s_RouteCacheSize);
-                    LogState(buf);
-                    Game::Log("[Coastguard] =======================================");
-                    Game::Log("[Coastguard] RUTA CACHEADA: %d checkpoints", s_RouteCacheSize);
-                    for (int i = 0; i < s_RouteCacheSize; i++) {
-                        Game::Log("[Coastguard]   CP[%d] = (%.1f, %.1f, %.1f) %s",
-                            i, s_RouteCache[i].x, s_RouteCache[i].y, s_RouteCache[i].z,
-                            s_RouteCPIsRace[i] ? "RACE" : "NORMAL");
-                    }
-                    Game::Log("[Coastguard] =======================================");
-                    s_State = State::RESTARTING;
-                    s_RestartStep = 0;
-                    s_KeyHeld = false;
-                    s_StateEntryTime = now;
-                    break;
-                }
-
-                Game::StabilizeVehicle();
-                
-                if (s_NewCPDetected) {
-                    s_State = State::TELEPORTING;
-                    s_StateEntryTime = now;
-                    s_NewCPDetected = false;
-                }
-                else if (elapsed >= 200) {
-                    bool foundNew = false;
-                    
-                    if (Game::IsCheckpointActive()) {
-                        Game::Vec3 cp = Game::GetCheckpointPosition();
-                        if ((fabsf(cp.x) > 1.0f || fabsf(cp.y) > 1.0f) &&
-                            IsDifferentPosition(cp, s_LastCompletedCP)) {
-                            s_CurrentCP = cp;
-                            s_IsRace = false;
-                            foundNew = true;
-                        }
-                    }
-                    if (!foundNew && Game::IsRaceCheckpointActive()) {
-                        Game::Vec3 rcp = Game::GetRaceCheckpointPosition();
-                        if ((fabsf(rcp.x) > 1.0f || fabsf(rcp.y) > 1.0f) &&
-                            IsDifferentPosition(rcp, s_LastCompletedCP)) {
-                            s_CurrentCP = rcp;
-                            s_IsRace = true;
-                            foundNew = true;
-                        }
-                    }
-                    
-                    if (foundNew) {
-                        s_State = State::TELEPORTING;
-                        s_StateEntryTime = now;
-                        s_NewCPDetected = false;
-                    }
-                }
-                
-                // Timeout → route learned!
-                if (!s_NewCPDetected && elapsed >= s_Config.nextCpWaitMs) {
-                    if (!Game::IsCheckpointActive() && !Game::IsRaceCheckpointActive()) {
-                        s_RouteKnown = true;
-                        char buf[128];
-                        snprintf(buf, sizeof(buf), 
-                            "RUTA APRENDIDA! %d CPs -> RESTARTING",
-                            s_RouteCacheSize);
-                        LogState(buf);
-                        Game::Log("[Coastguard] ========================================");
-                        Game::Log("[Coastguard] RUTA CACHEADA: %d checkpoints", s_RouteCacheSize);
-                        for (int i = 0; i < s_RouteCacheSize; i++) {
-                            Game::Log("[Coastguard]   CP[%d] = (%.1f, %.1f, %.1f) %s", 
-                                i, s_RouteCache[i].x, s_RouteCache[i].y, s_RouteCache[i].z,
-                                s_RouteCPIsRace[i] ? "RACE" : "NORMAL");
-                        }
-                        Game::Log("[Coastguard] ========================================");
-                        // Go to restart sequence
-                        s_State = State::RESTARTING;
-                        s_RestartStep = 0;
-                        s_KeyHeld = false;
-                        s_StateEntryTime = now;
-                    } else {
-                        // CP still active at same position as last completed.
-                        // DON'T reset s_LastCompletedCP — that causes duplicate entries.
-                        // Instead extend the timer and let the server update the CP.
-                        // After 4 consecutive same-pos timeouts (~6s total), force-accept
-                        // to avoid an infinite loop if the server never changes.
-                        static int s_SamePosRetry = 0;
-                        s_SamePosRetry++;
-                        if (s_SamePosRetry >= 4) {
-                            s_SamePosRetry = 0;
-                            // Force-accept: clear lastCompleted so same pos passes filter
-                            s_LastCompletedCP = {0, 0, 0};
-                            Game::Log("[Coastguard] Timeout x4 misma pos - forzando aceptacion");
-                        } else {
-                            // Just give more time; keep the duplicate filter intact
-                            s_StateEntryTime = now;
-                            Game::Log("[Coastguard] Timeout CP mismo pos (retry %d/4) - extendiendo espera...", s_SamePosRetry);
-                        }
-                    }
-                }
-                break;
-            }
-
-            // ========================================
-            // TURBO_BLAST: Blast through cached route at max speed
-            // ========================================
-            case State::TURBO_BLAST:
-            {
-                DWORD elapsed = now - s_StateEntryTime;
-                
-                if (elapsed < s_Config.turboDelayMs) break;
-                
-                if (s_TurboIndex >= s_RouteCacheSize) {
-                    char buf[128];
-                    snprintf(buf, sizeof(buf), 
-                        "TURBO COMPLETO! %d CPs -> RESTARTING",
-                        s_RouteCacheSize);
-                    LogState(buf);
-                    // Go to restart sequence
-                    s_State = State::RESTARTING;
-                    s_RestartStep = 0;
-                    s_KeyHeld = false;
-                    s_StateEntryTime = now;
-                    break;
-                }
-                
-                WORD vehID = GetActiveVehID();
-                if (vehID != 0xFFFF) {
-                    Game::Vec3 cp = s_RouteCache[s_TurboIndex];
-                    bool isRace = s_RouteCPIsRace[s_TurboIndex];
-                    // Guard: cached position should never be near-origin
-                    if (fabsf(cp.x) < 1.0f && fabsf(cp.y) < 1.0f) {
-                        Game::Log("[Coastguard] ERROR TURBO: cached CP[%d] near-origin (%.2f,%.2f,%.2f) - saltando",
-                            s_TurboIndex, cp.x, cp.y, cp.z);
-                        s_TurboIndex++;
-                        s_StateEntryTime = now;
-                        break;
-                    }
-
-                    // On the last CP, pre-position the vehicle at boat spawn to
-                    // eliminate travel time during the RESTARTING sequence.
-                    static const float BOAT_X = 719.1288f, BOAT_Y = -1698.4248f, BOAT_Z = 1.2874f;
-                    bool isLastCP = (s_TurboIndex == s_RouteCacheSize - 1);
-                    float tpX = isLastCP ? BOAT_X : cp.x;
-                    float tpY = isLastCP ? BOAT_Y : cp.y;
-                    float tpZ = isLastCP ? (BOAT_Z + 1.0f) : (cp.z + 1.0f);
-
-                    Game::TeleportVehicle(tpX, tpY, tpZ);
-                    Sender::SendFakeVehicleSync(vehID, isLastCP ? BOAT_X : cp.x, isLastCP ? BOAT_Y : cp.y, isLastCP ? BOAT_Z : cp.z);
-                    
-                    SAMP::SetInCheckpoint(true);
-                    if (isRace) {
-                        Sender::SendEnterRaceCheckpoint();
-                    } else {
-                        Sender::SendEnterCheckpoint();
-                    }
-                    SAMP::SetInCheckpoint(false);
-                    
-                    s_TurboIndex++;
-                    s_CPCount++;
-                    s_StateEntryTime = now;
-                    
-                    char buf[128];
-                    snprintf(buf, sizeof(buf), "TURBO CP #%d/%d (%.1f,%.1f,%.1f)",
-                        s_TurboIndex, s_RouteCacheSize, cp.x, cp.y, cp.z);
-                    LogState(buf);
-                } else {
-                    if (!Game::IsPlayerInVehicle()) {
-                        s_State = State::IDLE;
-                        LogState("Error: No vehicle in TURBO. Reset.");
-                    }
-                }
-                break;
-            }
-
-            // ========================================
-            // RESTARTING: TP ped a coords fijas del bote → F para entrar → tecla 2
-            // Step 0: Espera inicial + limpiar estado GTA/SAMP vehículo
-            // Step 1: TP ped a 715.9,-1699.5,4.4 (encima del bote)
-            // Step 2: Presionar F cada 1s hasta que GTA confirme entrada (timeout → step 0)
-            // Step 3: En vehículo → 3 incar syncs + tecla 2
-            // Step 4: Soltar 2
-            // Step 5: Esperar → IDLE
-            // ========================================
-            case State::RESTARTING:
-            {
-                DWORD elapsed = now - s_StateEntryTime;
-
-                switch (s_RestartStep) {
-                    case 0: // Initial wait + force exit vehicle in GTA/SAMP state
-                    {
-                        // On first tick of step 0, manually exit the vehicle so the ped
-                        // is 'on foot' before we teleport above the boat.
-                        if (elapsed == 0 || elapsed < 50) {
-                            DWORD ped = Game::GetPlayerPed();
-                            DWORD veh = Game::GetPlayerVehicle();
-                            if (ped && veh) {
-                                *(DWORD*)(ped + 0x58C) = 0;                      // ped->vehicle = null
-                                *(DWORD*)(veh + Game::CVEHICLE_DRIVER_OFFSET) = 0; // veh->driver = null
-                                Game::Log("[Restart] Step0: exited vehicle GTA state");
-                            }
-                            DWORD pLocal = SAMP::GetLocalPlayer();
-                            if (pLocal) {
-                                if (!IsBadWritePtr((void*)(pLocal + SAMPOffsets::LOCALPLAYER_VEHICLEID), 2))
-                                    *(WORD*)(pLocal + SAMPOffsets::LOCALPLAYER_VEHICLEID) = 0xFFFF;
-                                if (!IsBadWritePtr((void*)(pLocal + SAMPOffsets::LOCALPLAYER_STATE), 1))
-                                    *(BYTE*)(pLocal + SAMPOffsets::LOCALPLAYER_STATE) = (BYTE)SAMPOffsets::STATE_ONFOOT;
-                            }
-                            s_KnownVehID = 0xFFFF;
-                        }
-                        // Actively detect ejection: proceed as soon as SAMP vehicleID
-                        // is 0xFFFF (server ejected us), with restartInitialMs as max fallback.
-                        bool ejected = (SAMP::GetVehicleID() == 0xFFFF && !Game::IsPlayerInVehicle());
-                        if (ejected || elapsed >= s_Config.restartInitialMs) {
-                            s_RestartBegin = now;
-                            s_LastFPress = 0;
-                            s_RestartStep = 1;
-                            s_StateEntryTime = now;
-                            Game::Log("[Restart] Step0 done (ejected=%d elapsed=%lu). Buscando bote...",
-                                (int)ejected, (unsigned long)elapsed);
-                        }
-                        break;
-                    }
-                    case 1: // TP ped directamente a las coords del bote (sin buscar en pool)
-                    {
-                        // Boat spawn coords + heading
-                        static const float BOAT_X = 719.1288f;
-                        static const float BOAT_Y = -1698.4248f;
-                        static const float BOAT_Z = 1.7874f; // 1.2874 + 0.5
-                        static const float BOAT_H = 190.97f;  // heading degrees
-
-                        // Restore camera — server-sent camera RPCs (InterpolateCamera,
-                        // AttachCameraToObject) call CCamera::TakeControl() on the SAMP
-                        // camera object, freezing it until SAMP's own Restore() is called.
-                        // Plain GTA CCamera::Restore() does NOT fix this.
-                        SAMP::RestoreSAMPCamera();  // SA-MP camera object restore (key fix)
-                        SAMP::DisableSpectating();  // Clear m_bDoesSpectating if set
-                        Game::RestoreCamera();       // GTA camera fallback
-
-                        DWORD ped = Game::GetPlayerPed();
-                        if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
-                            *(float*)(ped + GameAddr::POS_X_SIMPLE) = BOAT_X;
-                            *(float*)(ped + GameAddr::POS_Y_SIMPLE) = BOAT_Y;
-                            *(float*)(ped + GameAddr::POS_Z_SIMPLE) = BOAT_Z;
-                            DWORD* pM = (DWORD*)(ped + GameAddr::MATRIX_OFFSET);
-                            if (pM && *pM) {
-                                DWORD m = *pM;
-                                *(float*)(m + GameAddr::POS_X_MATRIX) = BOAT_X;
-                                *(float*)(m + GameAddr::POS_Y_MATRIX) = BOAT_Y;
-                                *(float*)(m + GameAddr::POS_Z_MATRIX) = BOAT_Z;
-                            }
-                            Game::SetPedHeading(BOAT_H);
-                            Game::Log("[Restart] Step1: ped TP a (%.4f,%.4f,%.4f) heading=%.1f", BOAT_X, BOAT_Y, BOAT_Z, BOAT_H);
-                        }
-                        s_LastFPress = 0;
-                        s_RestartStep = 2;
-                        s_StateEntryTime = now;
-                        break;
-                    }
-                    case 2: // Press F every 1s until GTA says we're in vehicle
-                    {
-                        if (Game::IsPlayerInVehicle()) {
-                            // GTA confirmed entry — let SAMP sync happen naturally
-                            DWORD gtaVeh = Game::GetPlayerVehicle();
-                            if (gtaVeh) {
-                                WORD found = SAMP::GetSAMPIdFromGTAVehicle(gtaVeh);
-                                if (found != 0xFFFF) s_KnownVehID = found;
-                            }
-                            Game::Log("[Restart] Step2: en vehiculo! sampID=%d", (int)s_KnownVehID);
-                            s_RestartStep = 3;
-                            s_StateEntryTime = now;
-                            break;
-                        }
-
-                        DWORD totalElapsed = now - s_RestartBegin;
-                        if (totalElapsed >= s_Config.restartMaxWaitMs) {
-                            // Took too long — restart whole sequence
-                            s_RestartStep = 0;
-                            s_StateEntryTime = now;
-                            Game::Log("[Restart] Step2: timeout sin entrar vehiculo, reiniciando");
-                            break;
-                        }
-
-                        // Press F every restartWarpRetryMs (default 1s)
-                        if (now - s_LastFPress >= s_Config.restartWarpRetryMs) {
-                            s_LastFPress = now;
-                            // Re-teleport ped above boat before each F press — handles the case
-                            // where the boat is still respawning and the ped slid into the water.
-                            DWORD ped = Game::GetPlayerPed();
-                            if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
-                                static const float BX = 719.1288f, BY = -1698.4248f, BZ = 1.7874f;
-                                static const float BH = 190.97f;
-                                *(float*)(ped + GameAddr::POS_X_SIMPLE) = BX;
-                                *(float*)(ped + GameAddr::POS_Y_SIMPLE) = BY;
-                                *(float*)(ped + GameAddr::POS_Z_SIMPLE) = BZ;
-                                DWORD* pM = (DWORD*)(ped + GameAddr::MATRIX_OFFSET);
-                                if (pM && *pM) {
-                                    DWORD m = *pM;
-                                    *(float*)(m + GameAddr::POS_X_MATRIX) = BX;
-                                    *(float*)(m + GameAddr::POS_Y_MATRIX) = BY;
-                                    *(float*)(m + GameAddr::POS_Z_MATRIX) = BZ;
-                                }
-                                Game::SetPedHeading(BH);
-                            }
-                            PressKey('F');
-                            Game::Log("[Restart] Step2: reTP + F (esperando entrada vehiculo)");
-                            // Small delay then release F
-                            Sleep(80);
-                            ReleaseKey('F');
-                        }
-                        break;
-                    }
-                    case 3: // In vehicle → 3 incar syncs + press 2
-                    {
-                        WORD vehID = GetActiveVehID();
-                        DWORD gtaVeh = Game::GetPlayerVehicle();
-                        Game::Vec3 p = Game::GetEntityPosition(gtaVeh);
-
-                        if (vehID != 0xFFFF) {
-                            // Sync 1: confirm position to server
-                            Sender::SendFakeVehicleSync(vehID, p.x, p.y, p.z, 0);
-                            // Sync 2: confirm again (juego)
-                            Sender::SendFakeVehicleSync(vehID, p.x, p.y, p.z, 0);
-                            // Sync 3: con tecla 2 (KEY_START_ROUTE)
-                            Sender::SendFakeVehicleSync(vehID, p.x, p.y, p.z, Sender::KEY_START_ROUTE);
-                        }
-
-                        // Physical '2' keypress
-                        PressKey('2');
-                        s_KeyHeld = true;
-
-                        Game::Log("[Restart] Step3: 3 syncs + tecla 2 (vehID=%d pos=%.1f,%.1f,%.1f)",
-                            (int)vehID, p.x, p.y, p.z);
-
-                        s_RestartStep = 4;
-                        s_StateEntryTime = now;
-                        break;
-                    }
-                    case 4: // Release '2' after keyHoldMs
-                    {
-                        if (elapsed >= s_Config.keyHoldMs) {
-                            ReleaseKey('2');
-                            s_KeyHeld = false;
-                            WORD vehID = GetActiveVehID();
-                            if (vehID != 0xFFFF) {
-                                Game::Vec3 p = Game::GetEntityPosition(Game::GetPlayerVehicle());
-                                Sender::SendFakeVehicleSync(vehID, p.x, p.y, p.z, 0);
-                            }
-                            s_RestartStep = 5;
-                            s_StateEntryTime = now;
-                        }
-                        break;
-                    }
-                    case 5: // Wait → IDLE
-                    {
-                        WORD vehID = GetActiveVehID();
-                        if (vehID != 0xFFFF && now - s_LastKeepAlive >= 250) {
-                            s_LastKeepAlive = now;
-                            Game::Vec3 p = Game::GetEntityPosition(Game::GetPlayerVehicle());
-                            Sender::SendFakeVehicleSync(vehID, p.x, p.y, p.z, 0);
-                        }
-                        if (elapsed >= s_Config.restartAfterKeyMs) {
-                            Game::RestoreCamera();
-                            Game::Log("[Restart] Completado. Iniciando ciclo...");
-                            s_RestartStep = 0;
-                            s_State = State::IDLE;
-                            s_StateEntryTime = now;
-                        }
-                        break;
-                    }
-                }
-                break;
-            }
-
-            // ========================================
-            // COOLDOWN: Brief pause (fallback, shouldn't normally reach here)
-            // ========================================
-            case State::COOLDOWN:
-            {
-                DWORD elapsed = now - s_StateEntryTime;
-                
-                if (s_NewCPDetected && s_RouteKnown) {
-                    s_NewCPDetected = false;
-                    s_CPCount = 0;
-                    s_TurboIndex = 0;
-                    s_State = State::TURBO_BLAST;
-                    s_StateEntryTime = now;
-                    s_CycleCount++;
-                    LogState("TURBO reiniciado por CP detectado en cooldown!");
-                }
-                else if (s_NewCPDetected) {
-                    s_NewCPDetected = false;
-                    s_CPCount = 0;
-                    s_LastCompletedCP = {0, 0, 0};
-                    s_State = State::TELEPORTING;
-                    s_StateEntryTime = now;
-                    s_CycleCount++;
-                }
-                else if (elapsed >= s_Config.cooldownMs) {
-                    s_CurrentCP = {0, 0, 0};
-                    s_LastCompletedCP = {0, 0, 0};
-                    s_NewCPDetected = false;
-                    s_IsRace = false;
-                    s_State = State::IDLE;
-                    LogState("Cooldown terminado.");
-                }
-                break;
-            }
-        }
-    }
-
-    // Force trigger the boat warp sequence
     inline void StartRestart() {
         s_State = State::RESTARTING;
         s_RestartStep = 0;
-        s_StateEntryTime = GetTickCount();
+        s_StateTime = GetTickCount();
     }
 
-    inline Config& GetConfig() { return s_Config; }
-    inline State GetState() { return s_State; }
-    inline int GetCycleCount() { return s_CycleCount; }
-    inline int GetCPCount() { return s_CPCount; }
-    inline bool IsRouteKnown() { return s_RouteKnown; }
-    inline int GetRouteCacheSize() { return s_RouteCacheSize; }
-}
+    // ════════════════════════════════════════════════════════
+    // Main Update — call every tick when mod is active
+    // ════════════════════════════════════════════════════════
+
+    inline void Update() {
+        DWORD now = GetTickCount();
+
+        // Periodic camera restore (every 150ms while active)
+        if (s_State != State::IDLE) {
+            static DWORD s_LastCam = 0;
+            if (now - s_LastCam > 150) {
+                s_LastCam = now;
+                SAMP::RestoreCamera();
+            }
+        }
+
+        switch (s_State) {
+
+        // ────────────────────────────────────────────
+        // IDLE: Start a new cycle
+        // ────────────────────────────────────────────
+        case State::IDLE:
+        {
+            s_Cycle++;
+            s_CPCount = 0;
+            s_CurCP = s_LastCP = {0, 0, 0};
+            s_IsRace = false;
+            s_SamePosRetry = 0;
+
+            if (s_RouteKnown && s_RouteSize > 0) {
+                s_TurboIdx = 0;
+                s_State = State::TURBO;
+                Game::Log("[CG] TURBO cycle #%d (%d CPs)", s_Cycle, s_RouteSize);
+            } else {
+                s_RouteSize = 0;
+                s_State = State::WAITING_CP;
+                Game::Log("[CG] LEARNING cycle #%d", s_Cycle);
+            }
+            s_StateTime = now;
+            break;
+        }
+
+        // ────────────────────────────────────────────
+        // WAITING_CP: Wait for first checkpoint
+        // ────────────────────────────────────────────
+        case State::WAITING_CP:
+        {
+            DWORD elapsed = now - s_StateTime;
+
+            // Keep vehicle synced while waiting
+            WORD vid = GetActiveVehID();
+            if (vid != 0xFFFF) {
+                static DWORD s_LastSync = 0;
+                if (now - s_LastSync > 300) {
+                    s_LastSync = now;
+                    Vec3 p = Game::GetPosition(Game::GetPlayerVehicle());
+                    Net::SendVehicleSync(vid, p.x, p.y, p.z);
+                }
+            }
+
+            // Wait 1500ms for server to clear previous cycle's CP
+            if (elapsed < 1500) break;
+
+            Vec3 cp; bool race;
+            if (PollCheckpoint(cp, race)) {
+                s_CurCP = cp;
+                s_IsRace = race;
+                s_State = State::TELEPORTING;
+                s_StateTime = now;
+                Game::Log("[CG] CP found (%.1f,%.1f,%.1f)", cp.x, cp.y, cp.z);
+            }
+            break;
+        }
+
+        // ────────────────────────────────────────────
+        // TELEPORTING: TP to CP + enter
+        // ────────────────────────────────────────────
+        case State::TELEPORTING:
+        {
+            if (!IsValidPos(s_CurCP.x, s_CurCP.y)) {
+                s_State = State::IDLE;
+                break;
+            }
+            WORD vid = GetActiveVehID();
+            if (vid == 0xFFFF) {
+                if (!Game::IsInVehicle()) s_State = State::IDLE;
+                break;
+            }
+
+            DoTeleportAndEnter(s_CurCP, s_IsRace, vid);
+            CacheCP(s_CurCP, s_IsRace);
+            s_CPCount++;
+            s_LastCP = s_CurCP;
+            s_SamePosRetry = 0;
+            s_State = State::WAITING_NEXT;
+            s_StateTime = now;
+            Game::Log("[CG] TP+Enter CP #%d (%.1f,%.1f,%.1f)", s_CPCount, s_CurCP.x, s_CurCP.y, s_CurCP.z);
+            break;
+        }
+
+        // ────────────────────────────────────────────
+        // WAITING_NEXT: Wait for server to send next CP
+        // ────────────────────────────────────────────
+        case State::WAITING_NEXT:
+        {
+            DWORD elapsed = now - s_StateTime;
+
+            // Ejected from vehicle = route ended
+            if (!Game::IsInVehicle() && SAMP::GetVehicleID() == 0xFFFF) {
+                s_RouteKnown = true;
+                Game::Log("[CG] Ejected → route done (%d CPs)", s_RouteSize);
+                s_State = State::RESTARTING;
+                s_RestartStep = 0;
+                s_StateTime = now;
+                break;
+            }
+
+            Game::StabilizeVehicle();
+
+            // Look for a new (different) CP
+            if (elapsed >= 200) {
+                Vec3 cp; bool race;
+                if (PollCheckpoint(cp, race) && IsDifferent(cp, s_LastCP)) {
+                    s_CurCP = cp;
+                    s_IsRace = race;
+                    s_State = State::TELEPORTING;
+                    s_StateTime = now;
+                    break;
+                }
+            }
+
+            // Timeout
+            if (elapsed >= NEXT_CP_WAIT) {
+                if (!SAMP::IsCheckpointActive() && !SAMP::IsRaceCheckpointActive()) {
+                    // No checkpoint → route learned
+                    s_RouteKnown = true;
+                    Game::Log("[CG] Route learned (%d CPs) → RESTARTING", s_RouteSize);
+                    s_State = State::RESTARTING;
+                    s_RestartStep = 0;
+                    s_StateTime = now;
+                } else {
+                    // CP still active at same position — retry mechanism
+                    s_SamePosRetry++;
+                    if (s_SamePosRetry >= 4) {
+                        s_SamePosRetry = 0;
+                        s_LastCP = {0, 0, 0}; // force-accept next poll
+                        Game::Log("[CG] Same-pos timeout x4, forcing accept");
+                    } else {
+                        s_StateTime = now; // extend wait
+                    }
+                }
+            }
+            break;
+        }
+
+        // ────────────────────────────────────────────
+        // TURBO: Blast through cached route
+        // ────────────────────────────────────────────
+        case State::TURBO:
+        {
+            if (now - s_StateTime < TURBO_DELAY) break;
+
+            if (s_TurboIdx >= s_RouteSize) {
+                Game::Log("[CG] TURBO done → RESTARTING");
+                s_State = State::RESTARTING;
+                s_RestartStep = 0;
+                s_StateTime = now;
+                break;
+            }
+
+            WORD vid = GetActiveVehID();
+            if (vid == 0xFFFF) {
+                if (!Game::IsInVehicle()) s_State = State::IDLE;
+                break;
+            }
+
+            Vec3 cp = s_Route[s_TurboIdx];
+            bool race = s_RouteRace[s_TurboIdx];
+            if (!IsValidPos(cp.x, cp.y)) { s_TurboIdx++; s_StateTime = now; break; }
+
+            // On last CP, pre-position at boat spawn for faster restart
+            bool isLast = (s_TurboIdx == s_RouteSize - 1);
+            if (isLast) {
+                // TP to boat spawn BUT send sync at CP position
+                SAMP::RestoreCamera();
+                Game::RestoreGTACamera();
+                Game::TeleportVehicle(BOAT_X, BOAT_Y, BOAT_Z + 1.0f);
+                Net::SendVehicleSync(vid, cp.x, cp.y, cp.z);
+                if (race) Net::SendEnterRaceCheckpoint();
+                else      Net::SendEnterCheckpoint();
+            } else {
+                DoTeleportAndEnter(cp, race, vid);
+            }
+
+            s_TurboIdx++;
+            s_CPCount++;
+            s_StateTime = now;
+            Game::Log("[CG] TURBO #%d/%d", s_TurboIdx, s_RouteSize);
+            break;
+        }
+
+        // ────────────────────────────────────────────
+        // RESTARTING: Re-enter boat + start route
+        //   Step 0: Exit vehicle + wait
+        //   Step 1: TP ped to boat + settle camera (300ms)
+        //   Step 2: Press F until in vehicle
+        //   Step 3: Sync + press 2
+        //   Step 4: Release 2 + wait → IDLE
+        // ────────────────────────────────────────────
+        case State::RESTARTING:
+        {
+            DWORD elapsed = now - s_StateTime;
+
+            switch (s_RestartStep) {
+
+            case 0: // Exit vehicle state
+            {
+                if (elapsed < 50) {
+                    Game::FullCameraRestore();
+                    Game::ForceExitVehicle();
+                    s_KnownVeh = 0xFFFF;
+                }
+                bool ejected = (SAMP::GetVehicleID() == 0xFFFF && !Game::IsInVehicle());
+                if (ejected || elapsed >= RESTART_INIT) {
+                    s_RestartBegin = now;
+                    s_LastFPress = 0;
+                    s_FDown = false;
+                    s_RestartStep = 1;
+                    s_StateTime = now;
+                    Game::Log("[CG] Restart step 1: TP to boat");
+                }
+                break;
+            }
+
+            case 1: // TP ped above boat + settle camera
+            {
+                Game::FullCameraRestore();
+                if (elapsed < 50) {
+                    DWORD ped = Game::GetPlayerPed();
+                    if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
+                        Game::SetPosition(ped, BOAT_X, BOAT_Y, BOAT_Z);
+                        Game::SetHeading(BOAT_HEADING);
+                    }
+                }
+                if (elapsed >= 300) {
+                    s_RestartStep = 2;
+                    s_StateTime = now;
+                    Game::Log("[CG] Restart step 2: pressing F");
+                }
+                break;
+            }
+
+            case 2: // Press F until in vehicle
+            {
+                // Release F after key hold time
+                if (s_FDown && now - s_FDownAt >= KEY_HOLD) {
+                    Game::ReleaseKey('F');
+                    s_FDown = false;
+                }
+
+                Game::FullCameraRestore();
+
+                if (Game::IsInVehicle()) {
+                    if (s_FDown) { Game::ReleaseKey('F'); s_FDown = false; }
+                    DWORD gta = Game::GetPlayerVehicle();
+                    if (gta) {
+                        WORD found = SAMP::FindVehicleID(gta);
+                        if (found != 0xFFFF) s_KnownVeh = found;
+                    }
+                    Game::Log("[CG] Restart: in vehicle (ID=%d)", (int)s_KnownVeh);
+                    s_RestartStep = 3;
+                    s_StateTime = now;
+                    break;
+                }
+
+                if (now - s_RestartBegin >= RESTART_MAX) {
+                    if (s_FDown) { Game::ReleaseKey('F'); s_FDown = false; }
+                    s_RestartStep = 0;
+                    s_StateTime = now;
+                    Game::Log("[CG] Restart: F timeout, retrying");
+                    break;
+                }
+
+                if (!s_FDown && now - s_LastFPress >= F_RETRY) {
+                    s_LastFPress = now;
+                    // Re-position ped each retry (boat may be respawning)
+                    DWORD ped = Game::GetPlayerPed();
+                    if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
+                        Game::SetPosition(ped, BOAT_X, BOAT_Y, BOAT_Z);
+                        Game::SetHeading(BOAT_HEADING);
+                    }
+                    Game::PressKey('F');
+                    s_FDownAt = now;
+                    s_FDown = true;
+                }
+                break;
+            }
+
+            case 3: // In vehicle → sync + press 2
+            {
+                WORD vid = GetActiveVehID();
+                if (vid != 0xFFFF) {
+                    Vec3 p = Game::GetPosition(Game::GetPlayerVehicle());
+                    Net::SendVehicleSync(vid, p.x, p.y, p.z, 0);
+                    Net::SendVehicleSync(vid, p.x, p.y, p.z, Net::KEY_START_ROUTE);
+                }
+                Game::PressKey('2');
+                s_KeyHeld = true;
+                s_RestartStep = 4;
+                s_StateTime = now;
+                Game::Log("[CG] Restart step 3: syncs + key 2");
+                break;
+            }
+
+            case 4: // Release 2 + keep-alive → IDLE
+            {
+                if (s_KeyHeld && elapsed >= KEY_HOLD) {
+                    Game::ReleaseKey('2');
+                    s_KeyHeld = false;
+                }
+
+                // Keep-alive sync
+                WORD vid = GetActiveVehID();
+                if (vid != 0xFFFF) {
+                    static DWORD s_LastKA = 0;
+                    if (now - s_LastKA > 250) {
+                        s_LastKA = now;
+                        Vec3 p = Game::GetPosition(Game::GetPlayerVehicle());
+                        Net::SendVehicleSync(vid, p.x, p.y, p.z);
+                    }
+                }
+
+                if (elapsed >= AFTER_KEY2) {
+                    Game::FullCameraRestore();
+                    Game::Log("[CG] Restart complete → IDLE");
+                    s_RestartStep = 0;
+                    s_State = State::IDLE;
+                    s_StateTime = now;
+                }
+                break;
+            }
+
+            } // switch s_RestartStep
+            break;
+        }
+
+        } // switch s_State
+    }
+
+} // namespace Coastguard

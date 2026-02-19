@@ -10,7 +10,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Output as .asi (which is just a renamed .dll)
 set(CMAKE_SHARED_LIBRARY_SUFFIX ".asi")
 
-# Source files
+# ── SAMP-API library paths ──
+set(SAMPAPI_DIR ${CMAKE_SOURCE_DIR}/samp-api)
+set(SAMPAPI_INC ${SAMPAPI_DIR}/include)
+set(SAMPAPI_SRC ${SAMPAPI_DIR}/src/sampapi)
+set(SAMPAPI_DL  ${SAMPAPI_SRC}/0.3.DL-1)
+
+# ── SAMP-API source files (only what we use) ──
+set(SAMPAPI_SOURCES
+    ${SAMPAPI_SRC}/sampapi.cpp
+    ${SAMPAPI_SRC}/CVector.cpp
+    ${SAMPAPI_DL}/CNetGame.cpp
+    ${SAMPAPI_DL}/CGame.cpp
+    ${SAMPAPI_DL}/CChat.cpp
+    ${SAMPAPI_DL}/CInput.cpp
+    ${SAMPAPI_DL}/CCamera.cpp
+)
+
+# ── Our source files ──
 set(SOURCES
     src/main.cpp
     src/game.cpp
@@ -19,11 +36,18 @@ set(SOURCES
 set(HEADERS
     src/samp.h
     src/game.h
+    src/net.h
     src/coastguard.h
 )
 
 # Build as shared library (DLL -> ASI)
-add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+add_library(${PROJECT_NAME} SHARED ${SOURCES} ${SAMPAPI_SOURCES} ${HEADERS})
+
+# Include paths: our src + SAMP-API headers
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${SAMPAPI_INC}
+)
 
 # No lib prefix on Windows
 set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")

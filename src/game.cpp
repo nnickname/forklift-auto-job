@@ -1,32 +1,29 @@
 #include "game.h"
-#include "samp.h"
 #include <stdio.h>
 #include <stdarg.h>
 
 namespace Game {
+
     void AddChatMessage(DWORD color, const char* text) {
         Log("[CHAT] %s", text);
-        // Also try SA-MP chat (may fail if offsets wrong, but SEH protects)
-        __try {
-            SAMP::AddChatMessage(color, text);
-        } __except(EXCEPTION_EXECUTE_HANDLER) {}
+        __try { SAMP::AddChatMessage(color, text); }
+        __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 
     void Log(const char* fmt, ...) {
-        char buffer[1024];
+        char buf[1024];
         va_list args;
         va_start(args, fmt);
-        vsnprintf(buffer, sizeof(buffer), fmt, args);
+        vsnprintf(buf, sizeof(buf), fmt, args);
         va_end(args);
-
-        HANDLE hFile = CreateFileA("forklift_debug.log",
+        HANDLE h = CreateFileA("coastguard_debug.log",
             FILE_APPEND_DATA, FILE_SHARE_READ, NULL, OPEN_ALWAYS,
             FILE_ATTRIBUTE_NORMAL, NULL);
-        if (hFile != INVALID_HANDLE_VALUE) {
-            DWORD written;
-            WriteFile(hFile, buffer, lstrlenA(buffer), &written, NULL);
-            WriteFile(hFile, "\r\n", 2, &written, NULL);
-            CloseHandle(hFile);
+        if (h != INVALID_HANDLE_VALUE) {
+            DWORD w;
+            WriteFile(h, buf, lstrlenA(buf), &w, NULL);
+            WriteFile(h, "\r\n", 2, &w, NULL);
+            CloseHandle(h);
         }
     }
 }
