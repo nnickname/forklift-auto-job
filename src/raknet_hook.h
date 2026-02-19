@@ -62,15 +62,28 @@ namespace RakNetHook {
 
         // Only push update if state changed, position changed, or force mode
         if (cpActive) {
-            bool posChanged = (cpPos.x != s_LastCPX || cpPos.y != s_LastCPY || cpPos.z != s_LastCPZ);
-            bool stateChanged = !s_LastCPActive;
-            
-            if (stateChanged || posChanged || forceUpdate) {
-                s_LastCPActive = true;
-                s_LastCPX = cpPos.x;
-                s_LastCPY = cpPos.y;
-                s_LastCPZ = cpPos.z;
-                Coastguard::OnCheckpointUpdate(true, cpPos, isRace);
+            // Reject near-origin positions here too — prevents polluting s_LastCPX/Y/Z
+            // with zeros when bEnabled is set but the coords haven't been written yet.
+            bool nearOrigin = (fabsf(cpPos.x) < 1.0f && fabsf(cpPos.y) < 1.0f);
+            if (nearOrigin) {
+                // Don't cache or forward — just log once per occurrence
+                static float s_LastRejX = -99999.0f, s_LastRejY = -99999.0f;
+                if (cpPos.x != s_LastRejX || cpPos.y != s_LastRejY) {
+                    s_LastRejX = cpPos.x; s_LastRejY = cpPos.y;
+                    Game::Log("[Hook] CP activo pero near-origin (%.4f,%.4f,%.4f) - ignorado",
+                        cpPos.x, cpPos.y, cpPos.z);
+                }
+            } else {
+                bool posChanged = (cpPos.x != s_LastCPX || cpPos.y != s_LastCPY || cpPos.z != s_LastCPZ);
+                bool stateChanged = !s_LastCPActive;
+
+                if (stateChanged || posChanged || forceUpdate) {
+                    s_LastCPActive = true;
+                    s_LastCPX = cpPos.x;
+                    s_LastCPY = cpPos.y;
+                    s_LastCPZ = cpPos.z;
+                    Coastguard::OnCheckpointUpdate(true, cpPos, isRace);
+                }
             }
         } else if (s_LastCPActive) {
             s_LastCPActive = false;

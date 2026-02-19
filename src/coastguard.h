@@ -191,8 +191,10 @@ namespace Coastguard {
     // Called externally when checkpoint state changes
     static void OnCheckpointUpdate(bool active, Game::Vec3 pos, bool isRace) {
         if (!active) return;
-        // Reject exact (0,0,0) — uninitialized/stale struct value
-        if (pos.x == 0.0f && pos.y == 0.0f && pos.z == 0.0f) return;
+        // Reject near-origin positions — covers exact (0,0,0) AND cases where only
+        // Z has a tiny residue while X/Y are still unwritten (race condition in SA-MP).
+        // No valid GTA:SA coastguard CP will ever have both X and Y within 1.0 of origin.
+        if (fabsf(pos.x) < 1.0f && fabsf(pos.y) < 1.0f) return;
         if (fabsf(pos.x) > 20000.0f || fabsf(pos.y) > 20000.0f) return;
 
         s_IsRace = isRace;
@@ -289,6 +291,13 @@ namespace Coastguard {
                 }
 
                 if (s_NewCPDetected) {
+                    // Extra safety: discard if coords are still near-origin
+                    if (fabsf(s_CurrentCP.x) < 1.0f && fabsf(s_CurrentCP.y) < 1.0f) {
+                        s_NewCPDetected = false;
+                        Game::Log("[Coastguard] WARN: s_NewCPDetected pero CurrentCP near-origin (%.2f,%.2f,%.2f) - descartado",
+                            s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
+                        break;
+                    }
                     s_State = State::TELEPORTING;
                     s_StateEntryTime = now;
                     s_NewCPDetected = false;
@@ -339,6 +348,14 @@ namespace Coastguard {
             // ========================================
             case State::TELEPORTING:
             {
+                // Last-resort guard — should never fire if upper filters work, but
+                // if somehow a near-origin position made it here, reset instead of crashing.
+                if (fabsf(s_CurrentCP.x) < 1.0f && fabsf(s_CurrentCP.y) < 1.0f) {
+                    Game::Log("[Coastguard] ERROR TELEPORTING: CurrentCP near-origin (%.2f,%.2f,%.2f) - reset",
+                        s_CurrentCP.x, s_CurrentCP.y, s_CurrentCP.z);
+                    s_State = State::IDLE;
+                    break;
+                }
                 WORD vehID = GetActiveVehID();
                 if (vehID != 0xFFFF) {
                     if (now - s_LastTeleport >= s_Config.tpDelayMs) {
@@ -475,9 +492,25 @@ namespace Coastguard {
                 if (vehID != 0xFFFF) {
                     Game::Vec3 cp = s_RouteCache[s_TurboIndex];
                     bool isRace = s_RouteCPIsRace[s_TurboIndex];
-                    
-                    Game::TeleportVehicle(cp.x, cp.y, cp.z + 1.0f);
-                    Sender::SendFakeVehicleSync(vehID, cp.x, cp.y, cp.z);
+                    // Guard: cached position should never be near-origin
+                    if (fabsf(cp.x) < 1.0f && fabsf(cp.y) < 1.0f) {
+                        Game::Log("[Coastguard] ERROR TURBO: cached CP[%d] near-origin (%.2f,%.2f,%.2f) - saltando",
+                            s_TurboIndex, cp.x, cp.y, cp.z);
+                        s_TurboIndex++;
+                        s_StateEntryTime = now;
+                        break;
+                    }
+
+                    // On the last CP, pre-position the vehicle at boat spawn to
+                    // eliminate travel time during the RESTARTING sequence.
+                    static const float BOAT_X = 718.5153f, BOAT_Y = -1698.2440f, BOAT_Z = 1.0299f;
+                    bool isLastCP = (s_TurboIndex == s_RouteCacheSize - 1);
+                    float tpX = isLastCP ? BOAT_X : cp.x;
+                    float tpY = isLastCP ? BOAT_Y : cp.y;
+                    float tpZ = isLastCP ? (BOAT_Z + 1.0f) : (cp.z + 1.0f);
+
+                    Game::TeleportVehicle(tpX, tpY, tpZ);
+                    Sender::SendFakeVehicleSync(vehID, isLastCP ? BOAT_X : cp.x, isLastCP ? BOAT_Y : cp.y, isLastCP ? BOAT_Z : cp.z);
                     
                     SAMP::SetInCheckpoint(true);
                     if (isRace) {
@@ -539,21 +572,25 @@ namespace Coastguard {
                             }
                             s_KnownVehID = 0xFFFF;
                         }
-                        if (elapsed >= s_Config.restartInitialMs) {
+                        // Actively detect ejection: proceed as soon as SAMP vehicleID
+                        // is 0xFFFF (server ejected us), with restartInitialMs as max fallback.
+                        bool ejected = (SAMP::GetVehicleID() == 0xFFFF && !Game::IsPlayerInVehicle());
+                        if (ejected || elapsed >= s_Config.restartInitialMs) {
                             s_RestartBegin = now;
                             s_LastFPress = 0;
                             s_RestartStep = 1;
                             s_StateEntryTime = now;
-                            Game::Log("[Restart] Step0 done. Buscando bote...");
+                            Game::Log("[Restart] Step0 done (ejected=%d elapsed=%lu). Buscando bote...",
+                                (int)ejected, (unsigned long)elapsed);
                         }
                         break;
                     }
                     case 1: // TP ped directamente a las coords del bote (sin buscar en pool)
                     {
-                        // Boat spawn: 715.9, -1699.5, 2.4 → ped encima Z+2
-                        static const float BOAT_X = 718.7285f;
-                        static const float BOAT_Y = -1633.8752f;
-                        static const float BOAT_Z = 2.7480f; // 0.7480 + 2.0
+                        // Boat spawn: 718.5153, -1698.244, 1.0299 → ped encima Z+0.5
+                        static const float BOAT_X = 718.5153f;
+                        static const float BOAT_Y = -1698.2440f;
+                        static const float BOAT_Z = 1.5299f; // 1.0299 + 0.5
 
                         DWORD ped = Game::GetPlayerPed();
                         if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
@@ -605,7 +642,7 @@ namespace Coastguard {
                             // where the boat is still respawning and the ped slid into the water.
                             DWORD ped = Game::GetPlayerPed();
                             if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
-                                static const float BX = 718.7285f, BY = -1633.8752f, BZ = 2.7480f;
+                                static const float BX = 718.5153f, BY = -1698.2440f, BZ = 1.5299f;
                                 *(float*)(ped + GameAddr::POS_X_SIMPLE) = BX;
                                 *(float*)(ped + GameAddr::POS_Y_SIMPLE) = BY;
                                 *(float*)(ped + GameAddr::POS_Z_SIMPLE) = BZ;

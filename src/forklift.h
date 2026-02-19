@@ -96,7 +96,8 @@ namespace Forklift {
     // Called externally when checkpoint state changes
     static void OnCheckpointUpdate(bool active, Game::Vec3 pos, bool isRace) {
         if (!active) return;
-        if (pos.x == 0.0f && pos.y == 0.0f && pos.z == 0.0f) return;
+        // Reject near-origin: covers exact (0,0,0) and partial-write race conditions
+        if (fabsf(pos.x) < 1.0f && fabsf(pos.y) < 1.0f) return;
         if (fabsf(pos.x) > 20000.0f || fabsf(pos.y) > 20000.0f) return;
 
         s_IsRace = isRace;
