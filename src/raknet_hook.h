@@ -20,6 +20,14 @@ namespace RakNetHook {
     static bool  s_LastRCPActive = false;
     static float s_LastRCPX = 0, s_LastRCPY = 0, s_LastRCPZ = 0;
 
+    // Call this when entering WAITING_CHECKPOINT so an already-active CP fires OnCheckpointUpdate
+    inline void ResetTrackedState() {
+        s_LastCPActive   = false;
+        s_LastRCPActive  = false;
+        s_LastCPX = s_LastCPY = s_LastCPZ = 0;
+        s_LastRCPX = s_LastRCPY = s_LastRCPZ = 0;
+    }
+
     // Called from main loop (every tick)
     inline void Update() {
         if (!SAMP::IsInitialized()) return;
@@ -46,12 +54,18 @@ namespace RakNetHook {
             }
         }
 
-        // Only push update if state changed or position changed
+        // Always push update when coastguard is waiting for its first CP
+        // (the CP might have been active before we entered WAITING_CHECKPOINT,
+        //  so the normal "state/position changed" guard would suppress it).
+        bool forceUpdate = (Coastguard::GetState() == Coastguard::State::WAITING_CHECKPOINT ||
+                            Coastguard::GetState() == Coastguard::State::WAITING_NEXT_CP);
+
+        // Only push update if state changed, position changed, or force mode
         if (cpActive) {
             bool posChanged = (cpPos.x != s_LastCPX || cpPos.y != s_LastCPY || cpPos.z != s_LastCPZ);
             bool stateChanged = !s_LastCPActive;
             
-            if (stateChanged || posChanged) {
+            if (stateChanged || posChanged || forceUpdate) {
                 s_LastCPActive = true;
                 s_LastCPX = cpPos.x;
                 s_LastCPY = cpPos.y;

@@ -29,7 +29,7 @@ namespace AdminCheck {
 
     static const DWORD RESPONSE_WAIT_MS = 2500;    // Wait for server response
     static const DWORD PERIODIC_MS = 60000;        // Re-check every 60 seconds
-    static const int   MAX_SAFE_LINES = 2;         // <=2 lines = no admins
+    static const int   MAX_SAFE_LINES = 1;      // DISABLED: admin check bypassed
 
     static State s_State = State::IDLE;
     static DWORD s_Timestamp = 0;
@@ -419,23 +419,10 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
             }
         }
 
-        // Start periodic admin re-check — ONLY during safe states
-        // (never during active checkpoint work to avoid /admins interfering)
-        if (g_ModActive && sampDetected && !AdminCheck::IsChecking() && Coastguard::IsSafeForAdminCheck()) {
-            bool needsCheck = AdminCheck::NeedsPeriodic();
-            
-            // Also check at the start of each new coastguard cycle
-            if (!needsCheck && Coastguard::GetState() == Coastguard::State::IDLE) {
-                static int s_LastCycleChecked = -1;
-                int currentCycle = Coastguard::GetCycleCount();
-                if (currentCycle != s_LastCycleChecked) {
-                    s_LastCycleChecked = currentCycle;
-                    needsCheck = true;
-                    Game::Log("[ADMIN] Cycle #%d start - triggering admin check", currentCycle);
-                }
-            }
-            
-            if (needsCheck) {
+        // Start periodic admin re-check every 60s — runs in background regardless of
+        // cycle state (non-blocking state machine, does not pause the route).
+        if (g_ModActive && sampDetected && !AdminCheck::IsChecking()) {
+            if (AdminCheck::NeedsPeriodic()) {
                 AdminCheck::BeginCheck(true);
                 Game::Log("[ADMIN] Periodic admin check started");
             }

@@ -23,36 +23,47 @@ namespace SAMPOffsets {
     constexpr DWORD SAMP_CHAT_INFO_OFFSET  = 0x2ACA10;  // CChat**
     constexpr DWORD SAMP_CHAT_INPUT_OFFSET = 0x2ACA14;  // CInput**
 
-    // CNetGame internal offsets (pack 1) (Updated for 0.3.DL R1)
-    constexpr DWORD NETGAME_RAKCLIENT   = 0x2C;   // RakClientInterface*
-    constexpr DWORD NETGAME_GAMESTATE   = 0x3CD;  // int m_nGameState (Wait, check if this conflicts with Pools?)
-    // Note: User said Pools is at 0x3CD. My previous code had GameState at 0x3CD. 
-    // Usually Pools and GameState are close but distinct. 
-    // If User says Pools is 0x3CD, I will trust that. 
-    // Checking conflict: GameState was 0x3CD. If Pools is 0x3CD, then GameState must be elsewhere?
-    // Using user provided info strictly.
-    constexpr DWORD NETGAME_POOLS       = 0x3CD;  // Pools* (User provided)
-    
-    // Pools internal offsets
-    constexpr DWORD POOLS_PLAYERPOOL    = 0x18;   // User provided
-    constexpr DWORD POOLS_VEHICLEPOOL   = 0x1C;   // Updated: 0.3.DL usually follows PlayerPool (0x18) with VehiclePool at 0x1C
+    // CNetGame internal offsets (pack 1) — SA-MP 0.3.DL R1
+    // Verified from BlastHackNet/mod_sa samp-03dl branch stSAMP struct layout.
+    //
+    // stSAMP layout (pack 1):
+    //   _pad0[20]=0x00  pUnk0=0x14  pServerInfo=0x18  _pad1[16]=0x1C
+    //   pRakClientInterface=0x2C  szIP[257]=0x30  szHostname[257]=0x131
+    //   _pad2=0x232  m_bUpdateCameraTarget=0x233  m_bNoNameTagStatus=0x234
+    //   ulPort=0x235  m_bLanMode=0x239  ulMapIcons[100]=0x23D (400 bytes)
+    //   iGameState=0x3CD  ulConnectTick=0x3D1  pSettings=0x3D5
+    //   _pad3[5]=0x3D9  pPools=0x3DE
+    constexpr DWORD NETGAME_RAKCLIENT   = 0x2C;   // void* pRakClientInterface
+    constexpr DWORD NETGAME_GAMESTATE   = 0x3CD;  // Gamestate iGameState
+    constexpr DWORD NETGAME_POOLS       = 0x3DE;  // stSAMPPools* pPools
 
-    // CPlayerPool: pLocalPlayer offset
-    constexpr DWORD PLAYERPOOL_LOCALPLAYER = 0x0; // User provided
+    // stSAMPPools layout (pack 1) — 0.3.DL R1:
+    //   +0x00 pMenu, +0x04 pActor, +0x08 pPlayer, +0x0C pVehicle,
+    //   +0x10 pPickup, +0x14 pObject, +0x18 pGangzone, +0x1C pText3D, +0x20 pTextdraw
+    constexpr DWORD POOLS_PLAYERPOOL    = 0x08;   // stPlayerPool*
+    constexpr DWORD POOLS_VEHICLEPOOL   = 0x0C;   // stVehiclePool*
+
+    // stPlayerPool layout (pack 1):
+    //   +0x00 sLocalPlayerID(2), +0x02 pVTBL_txtHandler(4),
+    //   +0x06 strLocalPlayerName(std::string = 24 bytes),
+    //   +0x1E pLocalPlayer
+    constexpr DWORD PLAYERPOOL_LOCALPLAYER = 0x1E;
 
     // CLocalPlayer field offsets
     constexpr DWORD LOCALPLAYER_STATE          = 0x04;
     constexpr DWORD LOCALPLAYER_VEHICLEID      = 0xFC;
     constexpr DWORD LOCALPLAYER_IN_CHECKPOINT = 0x1A7;
 
+    // Gamestate: observed values on this server build: 1→2→6→5 during connect, stabilizes at 5.
+    // samp-03dl enum says CONNECTED=14 but this samp.dll reports 5 when in-game.
     constexpr int GAMESTATE_CONNECTED = 5;
 
     // Player States
     constexpr int STATE_ONFOOT = 1;
     constexpr int STATE_DRIVER = 2;
 
-    // Function offsets
-    constexpr DWORD FUNC_ADDCHATMESSAGE  = 0x67BE0;
+    // Function offsets (verified from samp-03dl SAMP_FUNC_ADDTOCHATWND)
+    constexpr DWORD FUNC_ADDCHATMESSAGE  = 0x67650;
     constexpr DWORD FUNC_SENDCMD         = 0x69340;
     constexpr DWORD FUNC_SAY             = 0x5860;
     constexpr DWORD FUNC_PUTINVEHICLE    = 0x162A0; // User provided
@@ -63,27 +74,45 @@ namespace SAMPOffsets {
 
 #pragma pack(push, 1)
 
+// CGame layout (SAMP-API 0.3.DL-1, pack 1):
+//   +0x00 CAudio* m_pAudio
+//   +0x04 CCamera* m_pCamera
+//   +0x08 CPed* m_pPlayerPed
+//   +0x0C m_checkpoint (NORMAL checkpoint):
+//         +0x0C CVector m_position  (12 bytes) ← NORMAL CP base
+//         +0x18 CVector m_size      (12 bytes)
+//         +0x24 BOOL   m_bEnabled   (4 bytes)
+//         +0x28 GTAREF m_handle     (4 bytes)  → total 32 bytes
+//   +0x2C m_racingCheckpoint (RACE checkpoint):
+//         +0x2C CVector m_currentPosition (12 bytes) ← RACE CP base
+//         +0x38 CVector m_nextPosition    (12 bytes)
+//         +0x44 float   m_fSize           (4 bytes)
+//         +0x48 char    m_nType           (1 byte)
+//         +0x49 BOOL    m_bEnabled        (4 bytes)  (pack 1 — no gap after char)
+//         +0x4D GTAREF  m_marker          (4 bytes)
+//         +0x51 GTAREF  m_handle          (4 bytes)  → total 41 bytes
+
 struct stCheckpoint {
-    float fX, fY, fZ;
-    char  pad[12];
-    float fSize;
-    int   bEnabled;
-    int   iHandle;
+    float fX, fY, fZ;                       // m_position (CVector)
+    float fExtentX, fExtentY, fExtentZ;     // m_size (CVector)
+    int   bEnabled;                          // m_bEnabled (BOOL) — at struct offset +24
 };
 
 struct stRaceCheckpoint {
-    float fX, fY, fZ;
-    float fNextX, fNextY, fNextZ;
-    float fSize;
-    char  bType;
-    char  padding[3];
-    int   bEnabled;
-    int   iMarker;
-    int   iHandle;
+    float fX, fY, fZ;               // m_currentPosition (CVector)
+    float fNextX, fNextY, fNextZ;   // m_nextPosition (CVector)
+    float fSize;                    // m_fSize
+    char  bType;                    // m_nType (1 byte)
+    // pack(1): m_bEnabled is immediately after m_nType, no padding
+    int   bEnabled;                 // m_bEnabled (BOOL) — at struct offset +29
+    int   iMarker;                  // m_marker (GTAREF)
+    int   iHandle;                  // m_handle (GTAREF)
 };
 
-constexpr DWORD CGAME_CHECKPOINT_OFFSET      = 0x0C;
-constexpr DWORD CGAME_RACECHECKPOINT_OFFSET  = 0x2C;
+// CGame pointer offsets (from pCGame = *(CGame**)SAMP_CGAME_PTR)
+// Per SAMP-API 0.3.DL-1 CGame.h (pack 1): normal checkpoint FIRST at +0x0C, race SECOND at +0x2C
+constexpr DWORD CGAME_CHECKPOINT_OFFSET      = 0x0C;  // m_checkpoint.m_position (NORMAL)
+constexpr DWORD CGAME_RACECHECKPOINT_OFFSET  = 0x2C;  // m_racingCheckpoint.m_currentPosition (RACE)
 
 #pragma pack(pop)
 
@@ -116,10 +145,11 @@ namespace SAMP {
     inline bool IsInitialized() {
         DWORD pNetGame = GetNetGame();
         if (!pNetGame) return false;
-        // User didn't provide GameState offset, but said Pools is 0x3CD. 
-        // Previously GameState was 0x3CD.
-        // Assuming we rely on pNetGame != NULL for now or check another way.
-        // Let's assume connected if pNetGame is valid and Pools is valid.
+        // Check gamestate == CONNECTED (14 in 0.3.DL R1)
+        int gameState = 0;
+        if (!SafeRead<int>(pNetGame + SAMPOffsets::NETGAME_GAMESTATE, gameState)) return false;
+        if (gameState != SAMPOffsets::GAMESTATE_CONNECTED) return false;
+        // Also confirm pools pointer is valid
         DWORD pPools = 0;
         SafeRead<DWORD>(pNetGame + SAMPOffsets::NETGAME_POOLS, pPools);
         return (pPools != 0);
@@ -194,10 +224,11 @@ namespace SAMP {
     inline bool DiagReadCheckpoint(float& x, float& y, float& z, int& enabled) {
         DWORD pCGame = GetCGame();
         if (!pCGame) return false;
+        // Normal checkpoint: m_checkpoint.m_position at +0x0C, m_bEnabled at +0x24
         SafeRead<float>(pCGame + 0x0C, x);
         SafeRead<float>(pCGame + 0x10, y);
         SafeRead<float>(pCGame + 0x14, z);
-        SafeRead<int>(pCGame + 0x24, enabled);
+        SafeRead<int>  (pCGame + 0x24, enabled);
         return true;
     }
 
@@ -232,55 +263,54 @@ namespace SAMP {
         if (!SafeRead<DWORD>(pNetGame + SAMPOffsets::NETGAME_POOLS, pPools) || !pPools) return 0;
         DWORD pVehiclePool = 0;
         if (!SafeRead<DWORD>(pPools + SAMPOffsets::POOLS_VEHICLEPOOL, pVehiclePool) || !pVehiclePool) return 0;
-        
-        // TODO: Update offsets for VehiclePool if needed. 
-        // 0.3.DL might differ from 0x4FB4. But no data provided.
-        // Assuming safe read failure will just return 0.
-        DWORD pSAMPVehicle = 0;
-        if (!SafeRead<DWORD>(pVehiclePool + 0x4FB4 + (id * 4), pSAMPVehicle) || !pSAMPVehicle) return 0;
 
+        // CVehiclePool layout (SAMP-API 0.3.DL-1, pack 1):
+        //   +0x00   int m_nCount (4)
+        //   +0x04   m_waiting: VehicleInfo[100]=4000b + BOOL[100]=400b = 4400b → ends at +0x1134
+        //   +0x1134 CVehicle* m_pObject[2000]  (SAMP objects, 8000b) → ends at +0x3074
+        //   +0x3074 BOOL m_bNotEmpty[2000]     (used as iIsListed, 8000b) → ends at +0x4FB4
+        //   +0x4FB4 ::CVehicle* m_pGameObject[2000] ← GTA vehicle pointers (direct, no extra deref)
+        // Read iIsListed to skip vacant slots quickly
+        int isListed = 0;
+        if (!SafeRead<int>(pVehiclePool + 0x3074 + (id * 4), isListed) || !isListed) return 0;
+
+        // pGTA_Vehicle[id] is the raw GTA CVehicle pointer
         DWORD pGTAVeh = 0;
-        if (SafeRead<DWORD>(pSAMPVehicle + 0x40, pGTAVeh)) return pGTAVeh;
-        return 0;
+        if (!SafeRead<DWORD>(pVehiclePool + 0x4FB4 + (id * 4), pGTAVeh)) return 0;
+        return pGTAVeh;
     }
 
     inline WORD GetSAMPIdFromGTAVehicle(DWORD gtaVehPtr) {
         if (!gtaVehPtr) return 0xFFFF;
-        
+
+        // Primary scan: match by GTA pointer directly
         for (WORD i = 0; i < 2000; i++) {
             if (GetGTAVehicleFromSAMPId(i) == gtaVehPtr) return i;
         }
 
-        // Distance fallback
+        // Distance fallback: compare world positions (POS_X_SIMPLE = +0x04)
         float targetX = 0, targetY = 0, targetZ = 0;
-        if (!SafeRead<float>(gtaVehPtr + 0x44, targetX)) return 0xFFFF;
-        SafeRead<float>(gtaVehPtr + 0x48, targetY);
-        SafeRead<float>(gtaVehPtr + 0x4C, targetZ);
+        if (!SafeRead<float>(gtaVehPtr + 0x04, targetX)) return 0xFFFF;
+        SafeRead<float>(gtaVehPtr + 0x08, targetY);
+        SafeRead<float>(gtaVehPtr + 0x0C, targetZ);
 
         for (WORD i = 0; i < 2000; i++) {
             DWORD pGTA = GetGTAVehicleFromSAMPId(i);
             if (!pGTA) continue;
             float x, y, z;
-            if (SafeRead<float>(pGTA + 0x44, x) && SafeRead<float>(pGTA + 0x48, y) && SafeRead<float>(pGTA + 0x4C, z)) {
+            if (SafeRead<float>(pGTA + 0x04, x) && SafeRead<float>(pGTA + 0x08, y) && SafeRead<float>(pGTA + 0x0C, z)) {
                 float dx = x - targetX;
                 float dy = y - targetY;
                 float dz = z - targetZ;
-                if ((dx*dx + dy*dy + dz*dz) < 100.0f) return i;
+                if ((dx*dx + dy*dy + dz*dz) < 25.0f) return i; // within 5m
             }
         }
         return 0xFFFF;
     }
 
-    // New 0.3.DL R1 specific PutInVehicle implementation
-    inline void PutInVehicle(int iVehicleID, int iSeat) {
-        DWORD pLocal = GetLocalPlayer();
-        if (pLocal) {
-            DWORD base = SAMPOffsets::GetSAMPBase();
-            if (base) {
-               typedef void(__thiscall* PutInVehicle_t)(void* _this, int vehID, int seat);
-               PutInVehicle_t fn = (PutInVehicle_t)(base + SAMPOffsets::FUNC_PUTINVEHICLE); // 0x162A0
-               fn((void*)pLocal, iVehicleID, iSeat);
-            }
-        }
-    }
+    // NOTE: SAMP::PutInVehicle (FUNC_PUTINVEHICLE = 0x162A0) is NOT used.
+    // The offset causes a crash on this server's samp.dll build.
+    // Vehicle warp is handled by Game::WarpPedIntoVehicle in game.h,
+    // which uses GTA's CPed::WarpPedIntoCar + manual SAMP state patch.
+
 } // namespace SAMP

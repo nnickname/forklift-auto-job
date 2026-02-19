@@ -176,8 +176,17 @@ namespace Sender {
         return SAMP::GetRakClient();
     }
 
+    // SA-MP in-vehicle sKeys bitmask constants (ControllerState::m_value bits)
+    // Used to simulate key presses in incar sync packets.
+    static const WORD KEY_INCAR_SECONDARY = 16;   // ButtonTriangle = Enter/Exit / Secondary attack
+    static const WORD KEY_INCAR_SUBMISSION = 512;  // ShockButtonR = Sub-mission / Look behind
+    static const WORD KEY_INCAR_ACTION = 1;        // LeftShoulder1 = Action
+    static const WORD KEY_INCAR_HORN = 0x0080;     // RightShoulder1 = Handbrake/Horn
+    // Combination used to trigger coastguard route start ('2' key covers multiple possible mappings)
+    static const WORD KEY_START_ROUTE = 16 | 512 | 1; // = 529
+
     // Send Vehicle Sync with real vehicle data
-    inline bool SendFakeVehicleSync(WORD vehicleId, float x, float y, float z) {
+    inline bool SendFakeVehicleSync(WORD vehicleId, float x, float y, float z, WORD sKeys = 0) {
         void* pRakClient = GetRakClient();
         if (!pRakClient) return false;
 
@@ -227,6 +236,7 @@ namespace Sender {
 
 
         data.sVehicleID = vehicleId;
+        data.sKeys = sKeys; // Key bitmask (0 = no keys, KEY_START_ROUTE = trigger job start)
         data.byteArmor = 0;
         data.byteCurrentWeapon = 0;
         data.byteSiren = 0;
