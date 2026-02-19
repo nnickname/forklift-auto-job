@@ -25,6 +25,10 @@ set(SAMPAPI_SOURCES
     ${SAMPAPI_DL}/CChat.cpp
     ${SAMPAPI_DL}/CInput.cpp
     ${SAMPAPI_DL}/CCamera.cpp
+    ${SAMPAPI_DL}/CEntity.cpp
+    ${SAMPAPI_DL}/CPed.cpp
+    ${SAMPAPI_DL}/CVehicle.cpp
+    ${SAMPAPI_DL}/CVehiclePool.cpp
 )
 
 # ── Our source files ──

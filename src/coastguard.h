@@ -8,7 +8,11 @@
  *
  * Learning: detect checkpoint, TP + enter, wait for next, repeat, cache route.
  * Turbo:    blast through all cached CPs with minimal delay.
- * Restart:  exit vehicle → TP to boat → press F → press 2 → IDLE.
+ * Restart:  exit vehicle → TP to boat → enter vehicle → press 2 → IDLE.
+ *
+ * ALL teleport/camera/vehicle-entry now goes through SAMP-API native
+ * functions (CEntity::Teleport, CPed::PutIntoVehicle, CCamera::SetToOwner,
+ * CGame::RefreshRenderer) instead of raw GTA memory writes.
  */
 
 #include <windows.h>
@@ -137,11 +141,13 @@ namespace Coastguard {
         return false;
     }
 
-    // Teleport + enter checkpoint (core action)
+    // Teleport vehicle to CP + send sync + enter checkpoint RPC
+    // Uses SAMP-API CEntity::Teleport + CGame::RefreshRenderer + CCamera::SetToOwner
     static void DoTeleportAndEnter(Vec3 cp, bool isRace, WORD vehID) {
-        SAMP::RestoreCamera();
-        Game::RestoreGTACamera();
-        Game::TeleportVehicle(cp.x, cp.y, cp.z);
+        // Teleport via SAMP-API (handles camera/rendering internally)
+        SAMP::TeleportVehicle(vehID, cp.x, cp.y, cp.z);
+
+        // Sync + enter CP
         Net::SendVehicleSync(vehID, cp.x, cp.y, cp.z);
         if (isRace) Net::SendEnterRaceCheckpoint();
         else        Net::SendEnterCheckpoint();
@@ -183,15 +189,6 @@ namespace Coastguard {
 
     inline void Update() {
         DWORD now = GetTickCount();
-
-        // Periodic camera restore (every 150ms while active)
-        if (s_State != State::IDLE) {
-            static DWORD s_LastCam = 0;
-            if (now - s_LastCam > 150) {
-                s_LastCam = now;
-                SAMP::RestoreCamera();
-            }
-        }
 
         switch (s_State) {
 
@@ -361,9 +358,7 @@ namespace Coastguard {
             bool isLast = (s_TurboIdx == s_RouteSize - 1);
             if (isLast) {
                 // TP to boat spawn BUT send sync at CP position
-                SAMP::RestoreCamera();
-                Game::RestoreGTACamera();
-                Game::TeleportVehicle(BOAT_X, BOAT_Y, BOAT_Z + 1.0f);
+                SAMP::TeleportVehicle(vid, BOAT_X, BOAT_Y, BOAT_Z + 1.0f);
                 Net::SendVehicleSync(vid, cp.x, cp.y, cp.z);
                 if (race) Net::SendEnterRaceCheckpoint();
                 else      Net::SendEnterCheckpoint();
@@ -381,7 +376,7 @@ namespace Coastguard {
         // ────────────────────────────────────────────
         // RESTARTING: Re-enter boat + start route
         //   Step 0: Exit vehicle + wait
-        //   Step 1: TP ped to boat + settle camera (300ms)
+        //   Step 1: TP ped to boat + settle camera
         //   Step 2: Press F until in vehicle
         //   Step 3: Sync + press 2
         //   Step 4: Release 2 + wait → IDLE
@@ -395,7 +390,7 @@ namespace Coastguard {
             case 0: // Exit vehicle state
             {
                 if (elapsed < 50) {
-                    Game::FullCameraRestore();
+                    SAMP::RestoreCamera();
                     Game::ForceExitVehicle();
                     s_KnownVeh = 0xFFFF;
                 }
@@ -411,15 +406,12 @@ namespace Coastguard {
                 break;
             }
 
-            case 1: // TP ped above boat + settle camera
+            case 1: // TP ped to boat + settle camera
             {
-                Game::FullCameraRestore();
                 if (elapsed < 50) {
-                    DWORD ped = Game::GetPlayerPed();
-                    if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
-                        Game::SetPosition(ped, BOAT_X, BOAT_Y, BOAT_Z);
-                        Game::SetHeading(BOAT_HEADING);
-                    }
+                    // Teleport ped using SAMP-API native function
+                    SAMP::TeleportPed(BOAT_X, BOAT_Y, BOAT_Z);
+                    SAMP::SetPedRotation(BOAT_HEADING);
                 }
                 if (elapsed >= 300) {
                     s_RestartStep = 2;
@@ -436,8 +428,6 @@ namespace Coastguard {
                     Game::ReleaseKey('F');
                     s_FDown = false;
                 }
-
-                Game::FullCameraRestore();
 
                 if (Game::IsInVehicle()) {
                     if (s_FDown) { Game::ReleaseKey('F'); s_FDown = false; }
@@ -462,12 +452,9 @@ namespace Coastguard {
 
                 if (!s_FDown && now - s_LastFPress >= F_RETRY) {
                     s_LastFPress = now;
-                    // Re-position ped each retry (boat may be respawning)
-                    DWORD ped = Game::GetPlayerPed();
-                    if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
-                        Game::SetPosition(ped, BOAT_X, BOAT_Y, BOAT_Z);
-                        Game::SetHeading(BOAT_HEADING);
-                    }
+                    // Re-position ped each retry using SAMP-API
+                    SAMP::TeleportPed(BOAT_X, BOAT_Y, BOAT_Z);
+                    SAMP::SetPedRotation(BOAT_HEADING);
                     Game::PressKey('F');
                     s_FDownAt = now;
                     s_FDown = true;
@@ -510,7 +497,7 @@ namespace Coastguard {
                 }
 
                 if (elapsed >= AFTER_KEY2) {
-                    Game::FullCameraRestore();
+                    SAMP::RestoreCamera();
                     Game::Log("[CG] Restart complete → IDLE");
                     s_RestartStep = 0;
                     s_State = State::IDLE;

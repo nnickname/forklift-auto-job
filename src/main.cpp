@@ -28,7 +28,7 @@ namespace AdminCheck {
 
     static const DWORD WAIT_MS   = 2500;
     static const DWORD PERIOD_MS = 60000;
-    static const int   SAFE_LINES = 2;
+    static const int   SAFE_LINES = 99;
 
     static Phase s_Phase       = Phase::IDLE;
     static DWORD s_Timestamp   = 0;
@@ -133,7 +133,6 @@ static void Deactivate(const char* reason) {
     g_Pending = false;
     Coastguard::Reset();
     __try { SAMP::RestoreCamera(); } __except (EXCEPTION_EXECUTE_HANDLER) {}
-    __try { Game::RestoreGTACamera(); } __except (EXCEPTION_EXECUTE_HANDLER) {}
     Game::Log("[MOD] Deactivated: %s", reason);
 }
 

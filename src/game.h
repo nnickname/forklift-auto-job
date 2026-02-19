@@ -2,8 +2,9 @@
 /**
  * GTA San Andreas (1.0 US) Game Functions
  *
- * GTA SA addresses are NOT part of SAMP-API — we access them directly.
- * SAMP-related state updates use the typed pointers from samp.h.
+ * Minimal GTA SA direct-memory helpers.  All teleport, vehicle entry, and
+ * camera functions now go through SAMP-API (see samp.h).
+ * This file only keeps position queries, vehicle detection, and key input.
  */
 
 #include <windows.h>
@@ -27,20 +28,7 @@ namespace GameAddr {
     constexpr DWORD SPEED_X        = 0x44;       // CVehicle velocity
     constexpr DWORD SPEED_Y        = 0x48;
     constexpr DWORD SPEED_Z        = 0x4C;
-    constexpr DWORD TURN_X         = 0x50;       // CVehicle angular velocity
-    constexpr DWORD TURN_Y         = 0x54;
-    constexpr DWORD TURN_Z         = 0x58;
     constexpr DWORD VEH_DRIVER     = 0x460;      // CVehicle → CPed* pDriver
-    constexpr DWORD GTA_VEH_POOL   = 0xB74494;   // CPool<CVehicle>*
-    constexpr DWORD CVEHICLE_SIZE  = 0x5DC;       // sizeof(CVehicle)
-
-    // GTA SA Camera (TheCamera instance + functions)
-    constexpr DWORD CAMERA_OBJ     = 0xB6F028;
-    constexpr DWORD FN_CAM_RESTORE = 0x50B930;   // CCamera::Restore()
-    constexpr DWORD FN_CAM_JUMPCUT = 0x50BAB0;   // CCamera::RestoreWithJumpCut()
-
-    // CPed::WarpPedIntoCar(CVehicle*)
-    constexpr DWORD FN_WARP_INTO_CAR = 0x4EF8B0;
 }
 
 // ════════════════════════════════════════════════════════════
@@ -111,45 +99,7 @@ namespace Game {
 
     inline Vec3 GetPlayerPos() { return GetPosition(GetPlayerPed()); }
 
-    inline void SetPosition(DWORD entity, float x, float y, float z) {
-        if (!entity) return;
-        *(float*)(entity + GameAddr::SIMPLE_X) = x;
-        *(float*)(entity + GameAddr::SIMPLE_Y) = y;
-        *(float*)(entity + GameAddr::SIMPLE_Z) = z;
-        DWORD* pMat = (DWORD*)(entity + GameAddr::MATRIX_PTR);
-        if (pMat && *pMat) {
-            DWORD m = *pMat;
-            *(float*)(m + GameAddr::MAT_POS_X) = x;
-            *(float*)(m + GameAddr::MAT_POS_Y) = y;
-            *(float*)(m + GameAddr::MAT_POS_Z) = z;
-        }
-    }
-
-    // ── Vehicle operations ──
-
-    inline void TeleportVehicle(float x, float y, float z) {
-        DWORD veh = GetPlayerVehicle();
-        if (!veh) return;
-        // Zero all velocity
-        *(float*)(veh + GameAddr::SPEED_X) = 0.0f;
-        *(float*)(veh + GameAddr::SPEED_Y) = 0.0f;
-        *(float*)(veh + GameAddr::SPEED_Z) = 0.0f;
-        *(float*)(veh + GameAddr::TURN_X)  = 0.0f;
-        *(float*)(veh + GameAddr::TURN_Y)  = 0.0f;
-        *(float*)(veh + GameAddr::TURN_Z)  = 0.0f;
-        // Position vehicle + ped
-        SetPosition(veh, x, y, z);
-        DWORD ped = GetPlayerPed();
-        if (ped) SetPosition(ped, x, y, z);
-        // Reset rotation to identity (flat/upright)
-        DWORD* pMat = (DWORD*)(veh + GameAddr::MATRIX_PTR);
-        if (pMat && *pMat) {
-            DWORD m = *pMat;
-            *(float*)(m+0x00)=1; *(float*)(m+0x04)=0; *(float*)(m+0x08)=0;
-            *(float*)(m+0x10)=0; *(float*)(m+0x14)=1; *(float*)(m+0x18)=0;
-            *(float*)(m+0x20)=0; *(float*)(m+0x24)=0; *(float*)(m+0x28)=1;
-        }
-    }
+    // ── Vehicle operations (stabilize only — teleport via SAMP-API) ──
 
     inline void StabilizeVehicle() {
         DWORD veh = GetPlayerVehicle();
@@ -157,104 +107,21 @@ namespace Game {
         *(float*)(veh + GameAddr::SPEED_X) = 0.0f;
         *(float*)(veh + GameAddr::SPEED_Y) = 0.0f;
         *(float*)(veh + GameAddr::SPEED_Z) = 0.0f;
-        *(float*)(veh + GameAddr::TURN_X)  = 0.0f;
-        *(float*)(veh + GameAddr::TURN_Y)  = 0.0f;
-        *(float*)(veh + GameAddr::TURN_Z)  = 0.0f;
-    }
-
-    inline void SetHeading(float angleDeg) {
-        DWORD ped = GetPlayerPed();
-        if (!ped || IsBadReadPtr((void*)ped, 0x600)) return;
-        float rad = angleDeg * 3.14159265f / 180.0f;
-        float s = sinf(rad), c = cosf(rad);
-        DWORD* pMat = (DWORD*)(ped + GameAddr::MATRIX_PTR);
-        if (pMat && *pMat) {
-            DWORD m = *pMat;
-            *(float*)(m+0x00)=c;  *(float*)(m+0x04)=-s; *(float*)(m+0x08)=0;
-            *(float*)(m+0x10)=s;  *(float*)(m+0x14)=c;  *(float*)(m+0x18)=0;
-            *(float*)(m+0x20)=0;  *(float*)(m+0x24)=0;  *(float*)(m+0x28)=1;
-        }
-        if (!IsBadWritePtr((void*)(ped + 0x558), 8)) {
-            *(float*)(ped + 0x558) = rad; // m_fCurrentRotation
-            *(float*)(ped + 0x55C) = rad; // m_fTargetRotation
-        }
-    }
-
-    // ── Camera ──
-
-    inline void RestoreGTACamera() {
-        __try {
-            void* cam = (void*)GameAddr::CAMERA_OBJ;
-            typedef void(__thiscall* Fn)(void*);
-            Fn fn1 = (Fn)GameAddr::FN_CAM_RESTORE;
-            Fn fn2 = (Fn)GameAddr::FN_CAM_JUMPCUT;
-            if (!IsBadCodePtr((FARPROC)fn1)) fn1(cam);
-            if (!IsBadCodePtr((FARPROC)fn2)) fn2(cam);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {}
-    }
-
-    inline void FullCameraRestore() {
-        SAMP::RestoreCamera();
-        RestoreGTACamera();
-    }
-
-    // ── Vehicle warp ──
-
-    inline DWORD FindGTAVehicleByModel(WORD modelId) {
-        DWORD pPool = 0;
-        if (!SafeRead(GameAddr::GTA_VEH_POOL, pPool) || !pPool) return 0;
-        if (IsBadReadPtr((void*)pPool, 0x10)) return 0;
-        DWORD objects = 0, flags = 0; int cap = 0;
-        SafeRead(pPool + 0x00, objects);
-        SafeRead(pPool + 0x04, flags);
-        SafeRead(pPool + 0x08, cap);
-        if (!objects || !flags || cap <= 0 || cap > 5000) return 0;
-        for (int i = 0; i < cap; i++) {
-            BYTE flag = 0;
-            if (!SafeRead(flags + (DWORD)i, flag)) continue;
-            if (flag & 0x80) continue; // free slot
-            DWORD veh = objects + i * GameAddr::CVEHICLE_SIZE;
-            if (IsBadReadPtr((void*)veh, 0x100)) continue;
-            WORD model = 0;
-            SafeRead(veh + GameAddr::MODEL_INDEX, model);
-            if (model == modelId) return veh;
-        }
-        return 0;
-    }
-
-    inline bool WarpIntoVehicle(DWORD gtaVeh) {
-        if (!gtaVeh || IsBadReadPtr((void*)gtaVeh, 0x470)) return false;
-        DWORD ped = GetPlayerPed();
-        if (!ped) return false;
-
-        // TP ped to vehicle
-        Vec3 vpos = GetPosition(gtaVeh);
-        SetPosition(ped, vpos.x, vpos.y, vpos.z + 0.3f);
-
-        // Call CPed::WarpPedIntoCar (with manual fallback)
-        __try {
-            typedef void(__thiscall* Fn)(DWORD, DWORD);
-            Fn fn = (Fn)GameAddr::FN_WARP_INTO_CAR;
-            if (!IsBadCodePtr((FARPROC)fn)) fn(ped, gtaVeh);
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            *(DWORD*)(ped + 0x58C) = gtaVeh;
-            *(DWORD*)(gtaVeh + GameAddr::VEH_DRIVER) = ped;
-        }
-
-        // Patch SA-MP vehicle state via typed pointers
-        WORD sampId = SAMP::FindVehicleID(gtaVeh);
-        if (sampId != 0xFFFF) {
-            SAMP::PatchVehicleID(sampId);
-        }
-        return true;
     }
 
     // Clean exit from vehicle (clear GTA + SAMP state)
     inline void ForceExitVehicle() {
-        DWORD ped = GetPlayerPed();
+        // Use SAMP-API CPed::ExitVehicle if possible
+        auto* ped = SAMP::GetPlayerPed();
+        if (ped) {
+            __try { ped->ExitVehicle(); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+        // Also clear pointers manually as fallback
+        DWORD gtaPed = GetPlayerPed();
         DWORD veh = GetPlayerVehicle();
-        if (ped && veh) {
-            *(DWORD*)(ped + 0x58C) = 0;
+        if (gtaPed && veh) {
+            *(DWORD*)(gtaPed + 0x58C) = 0;
             *(DWORD*)(veh + GameAddr::VEH_DRIVER) = 0;
         }
         auto* lp = SAMP::GetLocalPlayer();

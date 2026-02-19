@@ -5,7 +5,8 @@
  * All struct layouts and function addresses resolved by the SAMP-API library
  * from https://github.com/BlastHackNet/SAMP-API (multiver branch, 0.3.DL-1).
  *
- * No manual offset arithmetic — we use typed pointers and member access.
+ * Uses SAMP-API's native Teleport / PutIntoVehicle / Camera functions
+ * instead of raw GTA memory writes — this avoids camera lock bugs.
  */
 
 #include <windows.h>
@@ -21,6 +22,9 @@
 #include "sampapi/0.3.DL-1/CPlayerPool.h"
 #include "sampapi/0.3.DL-1/CVehiclePool.h"
 #include "sampapi/0.3.DL-1/CLocalPlayer.h"
+#include "sampapi/0.3.DL-1/CPed.h"
+#include "sampapi/0.3.DL-1/CVehicle.h"
+#include "sampapi/0.3.DL-1/CEntity.h"
 #include "sampapi/0.3.DL-1/Synchronization.h"
 
 // ── Convenience alias for the 0.3.DL-1 namespace ──
@@ -98,6 +102,15 @@ namespace SAMP {
         } __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
     }
 
+    // ── SAMP Ped (local player as CPed) ──
+
+    inline sapi::CPed* GetPlayerPed() {
+        auto* cg = GetCGame();
+        if (!cg) return nullptr;
+        __try { return cg->GetPlayerPed(); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
+    }
+
     // ── Vehicle ID ──
 
     inline WORD GetVehicleID() {
@@ -105,6 +118,17 @@ namespace SAMP {
         if (!lp) return 0xFFFF;
         __try { return lp->m_nCurrentVehicle; }
         __except (EXCEPTION_EXECUTE_HANDLER) { return 0xFFFF; }
+    }
+
+    // ── Get SAMP CVehicle* by SAMP ID ──
+
+    inline sapi::CVehicle* GetSAMPVehicle(WORD id) {
+        auto* vp = GetVehiclePool();
+        if (!vp || id >= 2000) return nullptr;
+        __try {
+            if (!vp->m_bNotEmpty[id]) return nullptr;
+            return vp->m_pObject[id];
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
     }
 
     // ── Checkpoint queries (read CGame struct fields) ──
@@ -161,20 +185,25 @@ namespace SAMP {
         __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 
-    // ── Camera restoration ──
+    // ════════════════════════════════════════════════════════
+    // CAMERA — uses SAMP-API CCamera native functions
+    // ════════════════════════════════════════════════════════
 
+    // Full camera restore: detach + restore + SetToOwner (snaps back to player)
     inline void RestoreCamera() {
         auto* cg = GetCGame();
         if (!cg) return;
         __try {
             auto* cam = cg->m_pCamera;
             if (cam) {
-                cam->m_pAttachedTo = nullptr;   // break TakeControl attachment
-                cam->Restore();                 // call samp.dll CCamera::Restore
+                cam->m_pAttachedTo = nullptr;
+                cam->Detach();
+                cam->Restore();
+                cam->SetToOwner();  // <-- KEY: snaps camera behind player
             }
         } __except (EXCEPTION_EXECUTE_HANDLER) {}
 
-        // Clear spectating flag on local player
+        // Clear spectating flag
         auto* lp = GetLocalPlayer();
         if (lp) {
             __try { lp->m_bDoesSpectating = 0; }
@@ -182,7 +211,102 @@ namespace SAMP {
         }
     }
 
-    // ── Vehicle pool helpers (direct field access, no samp.dll calls) ──
+    // ════════════════════════════════════════════════════════
+    // TELEPORT — uses SAMP-API CEntity::Teleport + CGame::RefreshRenderer
+    // These go through samp.dll and properly handle camera/world state
+    // ════════════════════════════════════════════════════════
+
+    // Teleport a SAMP vehicle (by SAMP ID) using samp.dll's native Teleport
+    inline bool TeleportVehicle(WORD vehicleId, float x, float y, float z) {
+        auto* sv = GetSAMPVehicle(vehicleId);
+        if (!sv) return false;
+        __try {
+            // Zero velocity via SAMP-API
+            sampapi::CVector zero = {0.0f, 0.0f, 0.0f};
+            sv->SetSpeed(zero);
+            sv->SetTurnSpeed(zero);
+            // Teleport through samp.dll (handles camera/rendering internally)
+            sampapi::CVector pos = {x, y, z};
+            sv->Teleport(pos);
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+
+        // Also teleport the ped (in case it desyncs)
+        auto* ped = GetPlayerPed();
+        if (ped) {
+            __try {
+                sampapi::CVector pos = {x, y, z};
+                ped->Teleport(pos);
+            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+
+        // Refresh world renderer at new position
+        auto* cg = GetCGame();
+        if (cg) {
+            __try { cg->RefreshRenderer(x, y); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+
+        // Restore camera to player
+        RestoreCamera();
+        return true;
+    }
+
+    // Teleport just the ped (on foot) using samp.dll's native Teleport
+    inline bool TeleportPed(float x, float y, float z) {
+        auto* ped = GetPlayerPed();
+        if (!ped) return false;
+        __try {
+            sampapi::CVector pos = {x, y, z};
+            ped->Teleport(pos);
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+
+        auto* cg = GetCGame();
+        if (cg) {
+            __try { cg->RefreshRenderer(x, y); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+        RestoreCamera();
+        return true;
+    }
+
+    // ════════════════════════════════════════════════════════
+    // VEHICLE ENTRY — uses SAMP-API CPed::PutIntoVehicle
+    // ════════════════════════════════════════════════════════
+
+    // Put player into vehicle using samp.dll's native function
+    inline bool PutIntoVehicle(WORD vehicleId) {
+        auto* vp = GetVehiclePool();
+        auto* ped = GetPlayerPed();
+        if (!vp || !ped) return false;
+
+        __try {
+            // Get the GTAREF handle for this vehicle (GTAREF is int)
+            int ref = vp->GetRef((int)vehicleId);
+            if (!ref) return false;
+            ped->PutIntoVehicle(ref, 0); // seat 0 = driver
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+
+        // Patch SAMP local player vehicle state
+        auto* lp = GetLocalPlayer();
+        if (lp) {
+            __try {
+                lp->m_nCurrentVehicle = vehicleId;
+                lp->m_incarData.m_nVehicle = vehicleId;
+            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+        return true;
+    }
+
+    // Force rotation using samp.dll's CPed::ForceRotation
+    inline void SetPedRotation(float angleDeg) {
+        auto* ped = GetPlayerPed();
+        if (!ped) return;
+        float rad = angleDeg * 3.14159265f / 180.0f;
+        __try { ped->ForceRotation(rad); }
+        __except (EXCEPTION_EXECUTE_HANDLER) {}
+    }
+
+    // ── Vehicle pool helpers ──
 
     inline DWORD GetGTAVehicle(WORD id) {
         auto* vp = GetVehiclePool();
