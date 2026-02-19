@@ -8,11 +8,11 @@
  *
  * Learning: detect checkpoint, TP + enter, wait for next, repeat, cache route.
  * Turbo:    blast through all cached CPs with minimal delay.
- * Restart:  exit vehicle → TP to boat → enter vehicle → press 2 → IDLE.
+ * Restart:  wait for boat respawn → PutIntoVehicle → press 2 → retry until CP.
  *
- * ALL teleport/camera/vehicle-entry now goes through SAMP-API native
- * functions (CEntity::Teleport, CPed::PutIntoVehicle, CCamera::SetToOwner,
- * CGame::RefreshRenderer) instead of raw GTA memory writes.
+ * ALL teleport/camera/vehicle-entry goes through SAMP-API native functions.
+ * Vehicle entry uses CPed::PutIntoVehicle (no F-key simulation).
+ * Known boat: model 472, SAMP vehicle ID 30.
  */
 
 #include <windows.h>
@@ -35,21 +35,26 @@ namespace Coastguard {
         RESTARTING      // Re-enter boat + start route
     };
 
-    // Boat spawn (Coastguard dock)
+    // Boat identity
     static constexpr WORD  BOAT_MODEL   = 472;
+    static constexpr WORD  BOAT_SAMP_ID = 30;    // Fixed SAMP vehicle ID
+
+    // Boat spawn position (Coastguard dock)
     static constexpr float BOAT_X       = 719.1288f;
     static constexpr float BOAT_Y       = -1698.4248f;
     static constexpr float BOAT_Z       = 1.7874f;
     static constexpr float BOAT_HEADING = 190.97f;
 
     // Timings (ms)
-    static constexpr DWORD TURBO_DELAY   = 150;   // Between CPs in turbo
-    static constexpr DWORD NEXT_CP_WAIT  = 1500;  // Max wait for next CP
-    static constexpr DWORD RESTART_INIT  = 1500;  // Initial wait after route ends
-    static constexpr DWORD RESTART_MAX   = 15000; // Max wait for F entry
-    static constexpr DWORD F_RETRY       = 1000;  // Retry F press interval
-    static constexpr DWORD KEY_HOLD      = 150;   // Key hold duration
-    static constexpr DWORD AFTER_KEY2    = 2000;  // Wait after pressing 2
+    static constexpr DWORD TURBO_DELAY      = 150;    // Between CPs in turbo
+    static constexpr DWORD NEXT_CP_WAIT     = 1500;   // Max wait for next CP
+    static constexpr DWORD RESTART_EXIT_WAIT= 500;    // Wait after exiting vehicle
+    static constexpr DWORD RESPAWN_CHECK    = 500;    // Poll interval for boat respawn
+    static constexpr DWORD RESPAWN_MAX      = 20000;  // Max wait for boat respawn
+    static constexpr DWORD KEY_HOLD         = 150;    // Key hold duration
+    static constexpr DWORD KEY2_RETRY       = 2000;   // Retry pressing 2 interval
+    static constexpr DWORD KEY2_CP_TIMEOUT  = 5000;   // Max wait for CP after pressing 2
+    static constexpr DWORD KEY2_MAX_RETRIES = 5;      // Max retries pressing 2
 
     static constexpr int MAX_ROUTE = 150;
 
@@ -76,12 +81,11 @@ namespace Coastguard {
     static WORD  s_KnownVeh = 0xFFFF;
 
     // Restart
-    static int   s_RestartStep   = 0;
-    static bool  s_KeyHeld       = false;
-    static DWORD s_RestartBegin  = 0;
-    static DWORD s_LastFPress    = 0;
-    static bool  s_FDown         = false;
-    static DWORD s_FDownAt       = 0;
+    static int   s_RestartStep    = 0;
+    static bool  s_KeyHeld        = false;
+    static DWORD s_RestartBegin   = 0;
+    static int   s_Key2Retries    = 0;
+    static DWORD s_LastKey2Press  = 0;
 
     // Same-position retry counter (WAITING_NEXT)
     static int   s_SamePosRetry  = 0;
@@ -162,13 +166,13 @@ namespace Coastguard {
 
     inline void Reset() {
         if (s_KeyHeld) { Game::ReleaseKey('2'); s_KeyHeld = false; }
-        if (s_FDown) { Game::ReleaseKey('F'); s_FDown = false; }
         s_State = State::IDLE;
         s_Cycle = 0;
         s_CPCount = 0;
         s_RestartStep = 0;
         s_KnownVeh = 0xFFFF;
         s_SamePosRetry = 0;
+        s_Key2Retries = 0;
     }
 
     inline void FullReset() {
@@ -375,11 +379,11 @@ namespace Coastguard {
 
         // ────────────────────────────────────────────
         // RESTARTING: Re-enter boat + start route
-        //   Step 0: Exit vehicle + wait
-        //   Step 1: TP ped to boat + settle camera
-        //   Step 2: Press F until in vehicle
-        //   Step 3: Sync + press 2
-        //   Step 4: Release 2 + wait → IDLE
+        //   Step 0: Exit vehicle + short wait
+        //   Step 1: Wait for boat (ID 30) to respawn
+        //   Step 2: TP ped + PutIntoVehicle(30)
+        //   Step 3: Press 2 + wait for CP
+        //   Step 4: CP appeared → IDLE (or retry 2)
         // ────────────────────────────────────────────
         case State::RESTARTING:
         {
@@ -387,99 +391,101 @@ namespace Coastguard {
 
             switch (s_RestartStep) {
 
-            case 0: // Exit vehicle state
+            case 0: // Exit vehicle + wait
             {
                 if (elapsed < 50) {
                     SAMP::RestoreCamera();
                     Game::ForceExitVehicle();
                     s_KnownVeh = 0xFFFF;
                 }
-                bool ejected = (SAMP::GetVehicleID() == 0xFFFF && !Game::IsInVehicle());
-                if (ejected || elapsed >= RESTART_INIT) {
+                if (elapsed >= RESTART_EXIT_WAIT) {
                     s_RestartBegin = now;
-                    s_LastFPress = 0;
-                    s_FDown = false;
                     s_RestartStep = 1;
                     s_StateTime = now;
-                    Game::Log("[CG] Restart step 1: TP to boat");
+                    Game::Log("[CG] Restart step 1: waiting for boat respawn");
                 }
                 break;
             }
 
-            case 1: // TP ped to boat + settle camera
+            case 1: // Wait for boat (SAMP ID 30) to exist
             {
-                if (elapsed < 50) {
-                    // Teleport ped using SAMP-API native function
-                    SAMP::TeleportPed(BOAT_X, BOAT_Y, BOAT_Z);
-                    SAMP::SetPedRotation(BOAT_HEADING);
-                }
-                if (elapsed >= 300) {
-                    s_RestartStep = 2;
-                    s_StateTime = now;
-                    Game::Log("[CG] Restart step 2: pressing F");
-                }
-                break;
-            }
-
-            case 2: // Press F until in vehicle
-            {
-                // Release F after key hold time
-                if (s_FDown && now - s_FDownAt >= KEY_HOLD) {
-                    Game::ReleaseKey('F');
-                    s_FDown = false;
+                // Check if vehicle 30 exists in the pool
+                auto* sv = SAMP::GetSAMPVehicle(BOAT_SAMP_ID);
+                if (sv) {
+                    __try {
+                        if (sv->DoesExist()) {
+                            s_RestartStep = 2;
+                            s_StateTime = now;
+                            Game::Log("[CG] Restart step 2: boat exists, entering");
+                            break;
+                        }
+                    } __except (EXCEPTION_EXECUTE_HANDLER) {}
                 }
 
-                if (Game::IsInVehicle()) {
-                    if (s_FDown) { Game::ReleaseKey('F'); s_FDown = false; }
-                    DWORD gta = Game::GetPlayerVehicle();
-                    if (gta) {
-                        WORD found = SAMP::FindVehicleID(gta);
-                        if (found != 0xFFFF) s_KnownVeh = found;
-                    }
-                    Game::Log("[CG] Restart: in vehicle (ID=%d)", (int)s_KnownVeh);
-                    s_RestartStep = 3;
-                    s_StateTime = now;
-                    break;
-                }
-
-                if (now - s_RestartBegin >= RESTART_MAX) {
-                    if (s_FDown) { Game::ReleaseKey('F'); s_FDown = false; }
+                // Timeout — boat didn't respawn
+                if (now - s_RestartBegin >= RESPAWN_MAX) {
+                    Game::Log("[CG] Restart: boat respawn timeout, retrying from step 0");
                     s_RestartStep = 0;
                     s_StateTime = now;
-                    Game::Log("[CG] Restart: F timeout, retrying");
-                    break;
-                }
-
-                if (!s_FDown && now - s_LastFPress >= F_RETRY) {
-                    s_LastFPress = now;
-                    // Re-position ped each retry using SAMP-API
-                    SAMP::TeleportPed(BOAT_X, BOAT_Y, BOAT_Z);
-                    SAMP::SetPedRotation(BOAT_HEADING);
-                    Game::PressKey('F');
-                    s_FDownAt = now;
-                    s_FDown = true;
                 }
                 break;
             }
 
-            case 3: // In vehicle → sync + press 2
+            case 2: // TP ped to boat + PutIntoVehicle(30) directly
             {
+                // Teleport ped near boat
+                SAMP::TeleportPed(BOAT_X, BOAT_Y, BOAT_Z);
+                SAMP::SetPedRotation(BOAT_HEADING);
+
+                // Put player directly into vehicle via SAMP-API
+                if (SAMP::PutIntoVehicle(BOAT_SAMP_ID)) {
+                    s_KnownVeh = BOAT_SAMP_ID;
+                    Game::Log("[CG] Restart: PutIntoVehicle(30) success");
+
+                    // Small delay then sync
+                    Vec3 p = {BOAT_X, BOAT_Y, BOAT_Z};
+                    Net::SendVehicleSync(BOAT_SAMP_ID, p.x, p.y, p.z, 0);
+
+                    s_Key2Retries = 0;
+                    s_LastKey2Press = 0;
+                    s_RestartStep = 3;
+                    s_StateTime = now;
+                } else {
+                    // PutIntoVehicle failed — retry after short wait
+                    Game::Log("[CG] Restart: PutIntoVehicle failed, retrying");
+                    s_RestartStep = 1;
+                    s_StateTime = now;
+                }
+                break;
+            }
+
+            case 3: // Press 2 to start route
+            {
+                // Wait a bit after entering vehicle before pressing 2
+                if (elapsed < 300) break;
+
+                // Press 2
+                Game::PressKey('2');
+                s_KeyHeld = true;
+                s_LastKey2Press = now;
+                s_RestartStep = 4;
+                s_StateTime = now;
+
+                // Also send key sync
                 WORD vid = GetActiveVehID();
                 if (vid != 0xFFFF) {
                     Vec3 p = Game::GetPosition(Game::GetPlayerVehicle());
                     Net::SendVehicleSync(vid, p.x, p.y, p.z, 0);
                     Net::SendVehicleSync(vid, p.x, p.y, p.z, Net::KEY_START_ROUTE);
                 }
-                Game::PressKey('2');
-                s_KeyHeld = true;
-                s_RestartStep = 4;
-                s_StateTime = now;
-                Game::Log("[CG] Restart step 3: syncs + key 2");
+
+                Game::Log("[CG] Restart step 3: pressed 2 (attempt %d)", s_Key2Retries + 1);
                 break;
             }
 
-            case 4: // Release 2 + keep-alive → IDLE
+            case 4: // Release 2 + wait for CP to appear
             {
+                // Release key after hold time
                 if (s_KeyHeld && elapsed >= KEY_HOLD) {
                     Game::ReleaseKey('2');
                     s_KeyHeld = false;
@@ -496,12 +502,30 @@ namespace Coastguard {
                     }
                 }
 
-                if (elapsed >= AFTER_KEY2) {
+                // Check if a checkpoint appeared
+                Vec3 cp; bool race;
+                if (elapsed >= 500 && PollCheckpoint(cp, race)) {
                     SAMP::RestoreCamera();
-                    Game::Log("[CG] Restart complete → IDLE");
+                    Game::Log("[CG] Restart: CP appeared! → IDLE");
                     s_RestartStep = 0;
                     s_State = State::IDLE;
                     s_StateTime = now;
+                    break;
+                }
+
+                // Timeout — no CP appeared after pressing 2
+                if (elapsed >= KEY2_CP_TIMEOUT) {
+                    s_Key2Retries++;
+                    if (s_Key2Retries >= (int)KEY2_MAX_RETRIES) {
+                        Game::Log("[CG] Restart: max key-2 retries, re-entering vehicle");
+                        s_Key2Retries = 0;
+                        s_RestartStep = 0; // full restart
+                        s_StateTime = now;
+                    } else {
+                        Game::Log("[CG] Restart: no CP, retrying key 2");
+                        s_RestartStep = 3; // retry pressing 2
+                        s_StateTime = now;
+                    }
                 }
                 break;
             }
