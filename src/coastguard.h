@@ -40,12 +40,12 @@ namespace Coastguard {
     };
 
     struct Config {
-        DWORD nextCpWaitMs     = 2500;   // Max wait for next CP to appear (route done if timeout)
+        DWORD nextCpWaitMs     = 1500;   // Max wait for next CP to appear (route done if timeout)
         DWORD cooldownMs       = 1500;   // Cooldown between full cycles
         DWORD waitRandomMs     = 200;    // Random variation
         DWORD turboDelayMs     = 150;    // Delay between CPs in turbo mode (ms)
         WORD  boatModelId      = 472;    // Coastguard boat
-        DWORD tpDelayMs        = 1500;   // Delay before TP (anti-crash)
+        DWORD tpDelayMs        = 100;    // Delay before TP (anti-crash)
         bool  checkVehicleModel = false;
         // Restart sequence timings
         DWORD restartInitialMs = 1500;   // Initial wait after route ends
@@ -56,7 +56,7 @@ namespace Coastguard {
     };
 
     // Route cache — learned from first cycle
-    static const int MAX_ROUTE_CPS = 50;
+    static const int MAX_ROUTE_CPS = 150;
     static Game::Vec3 s_RouteCache[MAX_ROUTE_CPS];
     static bool       s_RouteCPIsRace[MAX_ROUTE_CPS];
     static int        s_RouteCacheSize = 0;
@@ -179,12 +179,20 @@ namespace Coastguard {
     }
 
     static void CacheCP(Game::Vec3 pos, bool isRace) {
+        // Skip consecutive duplicates (same position entered twice due to server delay)
+        if (s_RouteCacheSize > 0 && !IsDifferentPosition(pos, s_RouteCache[s_RouteCacheSize - 1])) {
+            Game::Log("[Coastguard] CacheCP: duplicado ignorado (%.1f,%.1f,%.1f)", pos.x, pos.y, pos.z);
+            return;
+        }
         if (s_RouteCacheSize < MAX_ROUTE_CPS) {
             s_RouteCache[s_RouteCacheSize] = pos;
             s_RouteCPIsRace[s_RouteCacheSize] = isRace;
             s_RouteCacheSize++;
             Game::Log("[Coastguard] Ruta cacheada: CP #%d (%.1f,%.1f,%.1f) %s", 
                 s_RouteCacheSize, pos.x, pos.y, pos.z, isRace ? "RACE" : "NORMAL");
+        } else {
+            Game::Log("[Coastguard] WARN: cache lleno (%d), CP descartado (%.1f,%.1f,%.1f)",
+                MAX_ROUTE_CPS, pos.x, pos.y, pos.z);
         }
     }
 
@@ -235,6 +243,18 @@ namespace Coastguard {
     // Main update - called every tick when mod is active
     inline void Update() {
         DWORD now = GetTickCount();
+
+        // Periodic SAMP camera restore — the server sends InterpolateCamera /
+        // AttachCameraToObject RPCs at each checkpoint which call TakeControl()
+        // internally and freeze the camera. We must call CCamera::Restore() on
+        // the SAMP camera object periodically to undo this while the mod is active.
+        if (s_State != State::IDLE) {
+            static DWORD s_LastCameraRestoreTime = 0;
+            if (now - s_LastCameraRestoreTime > 1500) {
+                s_LastCameraRestoreTime = now;
+                SAMP::RestoreSAMPCamera();
+            }
+        }
 
         if (s_Config.checkVehicleModel && s_State != State::RESTARTING) {
             WORD model = Game::GetVehicleModelId();
@@ -398,8 +418,33 @@ namespace Coastguard {
             // ========================================
             case State::WAITING_NEXT_CP:
             {
-                Game::StabilizeVehicle();
                 DWORD elapsed = now - s_StateEntryTime;
+
+                // If the server kicked us out of the vehicle, the route ended.
+                // Don't wait for the timeout — go to RESTARTING immediately.
+                if (!Game::IsPlayerInVehicle() && SAMP::GetVehicleID() == 0xFFFF) {
+                    s_RouteKnown = true;
+                    char buf[128];
+                    snprintf(buf, sizeof(buf),
+                        "Expulsado de vehiculo = ruta terminada! %d CPs -> RESTARTING",
+                        s_RouteCacheSize);
+                    LogState(buf);
+                    Game::Log("[Coastguard] =======================================");
+                    Game::Log("[Coastguard] RUTA CACHEADA: %d checkpoints", s_RouteCacheSize);
+                    for (int i = 0; i < s_RouteCacheSize; i++) {
+                        Game::Log("[Coastguard]   CP[%d] = (%.1f, %.1f, %.1f) %s",
+                            i, s_RouteCache[i].x, s_RouteCache[i].y, s_RouteCache[i].z,
+                            s_RouteCPIsRace[i] ? "RACE" : "NORMAL");
+                    }
+                    Game::Log("[Coastguard] =======================================");
+                    s_State = State::RESTARTING;
+                    s_RestartStep = 0;
+                    s_KeyHeld = false;
+                    s_StateEntryTime = now;
+                    break;
+                }
+
+                Game::StabilizeVehicle();
                 
                 if (s_NewCPDetected) {
                     s_State = State::TELEPORTING;
@@ -458,8 +503,23 @@ namespace Coastguard {
                         s_KeyHeld = false;
                         s_StateEntryTime = now;
                     } else {
-                        Game::Log("[Coastguard] Timeout pero hay CP activo. Forzando re-read...");
-                        s_LastCompletedCP = {0, 0, 0};
+                        // CP still active at same position as last completed.
+                        // DON'T reset s_LastCompletedCP — that causes duplicate entries.
+                        // Instead extend the timer and let the server update the CP.
+                        // After 4 consecutive same-pos timeouts (~6s total), force-accept
+                        // to avoid an infinite loop if the server never changes.
+                        static int s_SamePosRetry = 0;
+                        s_SamePosRetry++;
+                        if (s_SamePosRetry >= 4) {
+                            s_SamePosRetry = 0;
+                            // Force-accept: clear lastCompleted so same pos passes filter
+                            s_LastCompletedCP = {0, 0, 0};
+                            Game::Log("[Coastguard] Timeout x4 misma pos - forzando aceptacion");
+                        } else {
+                            // Just give more time; keep the duplicate filter intact
+                            s_StateEntryTime = now;
+                            Game::Log("[Coastguard] Timeout CP mismo pos (retry %d/4) - extendiendo espera...", s_SamePosRetry);
+                        }
                     }
                 }
                 break;
@@ -503,7 +563,7 @@ namespace Coastguard {
 
                     // On the last CP, pre-position the vehicle at boat spawn to
                     // eliminate travel time during the RESTARTING sequence.
-                    static const float BOAT_X = 718.5153f, BOAT_Y = -1698.2440f, BOAT_Z = 1.0299f;
+                    static const float BOAT_X = 719.1288f, BOAT_Y = -1698.4248f, BOAT_Z = 1.2874f;
                     bool isLastCP = (s_TurboIndex == s_RouteCacheSize - 1);
                     float tpX = isLastCP ? BOAT_X : cp.x;
                     float tpY = isLastCP ? BOAT_Y : cp.y;
@@ -587,10 +647,19 @@ namespace Coastguard {
                     }
                     case 1: // TP ped directamente a las coords del bote (sin buscar en pool)
                     {
-                        // Boat spawn: 718.5153, -1698.244, 1.0299 → ped encima Z+0.5
-                        static const float BOAT_X = 718.5153f;
-                        static const float BOAT_Y = -1698.2440f;
-                        static const float BOAT_Z = 1.5299f; // 1.0299 + 0.5
+                        // Boat spawn coords + heading
+                        static const float BOAT_X = 719.1288f;
+                        static const float BOAT_Y = -1698.4248f;
+                        static const float BOAT_Z = 1.7874f; // 1.2874 + 0.5
+                        static const float BOAT_H = 190.97f;  // heading degrees
+
+                        // Restore camera — server-sent camera RPCs (InterpolateCamera,
+                        // AttachCameraToObject) call CCamera::TakeControl() on the SAMP
+                        // camera object, freezing it until SAMP's own Restore() is called.
+                        // Plain GTA CCamera::Restore() does NOT fix this.
+                        SAMP::RestoreSAMPCamera();  // SA-MP camera object restore (key fix)
+                        SAMP::DisableSpectating();  // Clear m_bDoesSpectating if set
+                        Game::RestoreCamera();       // GTA camera fallback
 
                         DWORD ped = Game::GetPlayerPed();
                         if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
@@ -604,7 +673,8 @@ namespace Coastguard {
                                 *(float*)(m + GameAddr::POS_Y_MATRIX) = BOAT_Y;
                                 *(float*)(m + GameAddr::POS_Z_MATRIX) = BOAT_Z;
                             }
-                            Game::Log("[Restart] Step1: ped TP a (%.1f,%.1f,%.1f)", BOAT_X, BOAT_Y, BOAT_Z);
+                            Game::SetPedHeading(BOAT_H);
+                            Game::Log("[Restart] Step1: ped TP a (%.4f,%.4f,%.4f) heading=%.1f", BOAT_X, BOAT_Y, BOAT_Z, BOAT_H);
                         }
                         s_LastFPress = 0;
                         s_RestartStep = 2;
@@ -642,7 +712,8 @@ namespace Coastguard {
                             // where the boat is still respawning and the ped slid into the water.
                             DWORD ped = Game::GetPlayerPed();
                             if (ped && !IsBadReadPtr((void*)ped, 0x600)) {
-                                static const float BX = 718.5153f, BY = -1698.2440f, BZ = 1.5299f;
+                                static const float BX = 719.1288f, BY = -1698.4248f, BZ = 1.7874f;
+                                static const float BH = 190.97f;
                                 *(float*)(ped + GameAddr::POS_X_SIMPLE) = BX;
                                 *(float*)(ped + GameAddr::POS_Y_SIMPLE) = BY;
                                 *(float*)(ped + GameAddr::POS_Z_SIMPLE) = BZ;
@@ -653,6 +724,7 @@ namespace Coastguard {
                                     *(float*)(m + GameAddr::POS_Y_MATRIX) = BY;
                                     *(float*)(m + GameAddr::POS_Z_MATRIX) = BZ;
                                 }
+                                Game::SetPedHeading(BH);
                             }
                             PressKey('F');
                             Game::Log("[Restart] Step2: reTP + F (esperando entrada vehiculo)");

@@ -243,6 +243,8 @@ static void FullDeactivate(const char* reason) {
     g_ModActive = false;
     g_PendingActivation = false;
     Coastguard::Reset();
+    __try { SAMP::RestoreSAMPCamera(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
+    __try { SAMP::DisableSpectating(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
     __try { Game::RestorePlayerState(); } __except(EXCEPTION_EXECUTE_HANDLER) {}
     Game::Log("[MOD] Desactivado: %s", reason);
 }
@@ -464,10 +466,13 @@ static DWORD WINAPI MainThread(LPVOID lpParam) {
                     RakNetHook::Update();
                 } else {
                     auto st = Coastguard::GetState();
-                    if (st == Coastguard::State::RESTARTING) {
-                        // Allow restart sequence while on foot (warping into vehicle)
+                    if (st == Coastguard::State::RESTARTING ||
+                        st == Coastguard::State::IDLE ||
+                        st == Coastguard::State::COOLDOWN ||
+                        st == Coastguard::State::WAITING_NEXT_CP) {
+                        // WAITING_NEXT_CP: allow so ejection is detected as route-end
                         Coastguard::Update();
-                    } else if (st != Coastguard::State::IDLE && st != Coastguard::State::WAITING_CHECKPOINT) {
+                    } else if (st != Coastguard::State::WAITING_CHECKPOINT) {
                         Coastguard::Reset();
                     }
                 }

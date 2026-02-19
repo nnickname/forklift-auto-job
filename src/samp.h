@@ -194,6 +194,22 @@ namespace SAMP {
         *(BYTE*)(pLocal + SAMPOffsets::LOCALPLAYER_IN_CHECKPOINT) = active ? 1 : 0;
     }
 
+    // Calls CLocalPlayer::EnableSpectating(FALSE) — SA-MP internal function that
+    // properly clears m_bDoesSpectating and restores the input/camera pipeline.
+    // Offset 0x4080 verified from BlastHackNet/samp-api 0.3.DL-1 CLocalPlayer.cpp.
+    // This is the correct fix for frozen camera/input after route ends.
+    inline void DisableSpectating() {
+        DWORD sampBase = SAMPOffsets::GetSAMPBase();
+        DWORD pLocal = GetLocalPlayer();
+        if (!sampBase || !pLocal) return;
+        __try {
+            typedef void(__thiscall* EnableSpectating_t)(void*, BOOL);
+            EnableSpectating_t fn = (EnableSpectating_t)(sampBase + 0x4080);
+            if (!IsBadCodePtr((FARPROC)fn))
+                fn((void*)pLocal, FALSE);
+        } __except(EXCEPTION_EXECUTE_HANDLER) {}
+    }
+
     inline DWORD GetCGame() {
         DWORD base = SAMPOffsets::GetSAMPBase();
         if (!base) return 0;
@@ -201,6 +217,29 @@ namespace SAMP {
         if (!SafeRead<DWORD>(base + SAMPOffsets::SAMP_CGAME_PTR, pCGame)) return 0;
         if (!pCGame || IsBadReadPtr((void*)pCGame, 0x60)) return 0;
         return pCGame;
+    }
+
+    // Calls SA-MP's own CCamera::Restore() on the SAMP camera object (pCGame+0x04).
+    // This is the correct fix for camera freeze caused by server-sent camera RPCs
+    // (InterpolateCamera, AttachCameraToObject, SetCameraLookAt) that call
+    // CCamera::TakeControl() internally. GTA's own Restore() does NOT touch the
+    // SAMP camera object state.
+    // CCamera::Restore offset 0x9D580 verified from BlastHackNet/samp-api 0.3.DL-1.
+    inline void RestoreSAMPCamera() {
+        DWORD sampBase = SAMPOffsets::GetSAMPBase();
+        if (!sampBase) return;
+        __try {
+            DWORD pCGame = GetCGame();
+            if (!pCGame) return;
+            // pCGame+0x04 = CCamera* m_pCamera (from CGame layout in samp-api 0.3.DL-1)
+            DWORD pSAMPCamera = 0;
+            if (!SafeRead<DWORD>(pCGame + 0x04, pSAMPCamera) || !pSAMPCamera) return;
+            if (IsBadReadPtr((void*)pSAMPCamera, 4)) return;
+            typedef void(__thiscall* CameraRestore_t)(void*);
+            CameraRestore_t fn = (CameraRestore_t)(sampBase + 0x9D580);
+            if (!IsBadCodePtr((FARPROC)fn))
+                fn((void*)pSAMPCamera);
+        } __except(EXCEPTION_EXECUTE_HANDLER) {}
     }
 
     inline stCheckpoint* GetCurrentCheckpoint() {

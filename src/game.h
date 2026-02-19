@@ -118,6 +118,43 @@ namespace Game {
         }
     }
 
+    // Set ped heading in degrees (0=north, 90=east, 180=south, clockwise).
+    // Updates both matrix rotation vectors and the SA internal angle floats (0x558/0x55C).
+    inline void SetPedHeading(float angleDeg) {
+        DWORD ped = GetPlayerPed();
+        if (!ped || IsBadReadPtr((void*)ped, 0x600)) return;
+        const float PI = 3.14159265f;
+        float rad = angleDeg * PI / 180.0f;
+        float sinH = sinf(rad);
+        float cosH = cosf(rad);
+        // CMatrix rotation vectors:
+        //   Forward (at)  = (sin, cos, 0)   — facing direction
+        //   Right         = (cos, -sin, 0)  — 90° clockwise from forward
+        //   Up            = (0, 0, 1)
+        DWORD* pMatrix = (DWORD*)(ped + GameAddr::MATRIX_OFFSET);
+        if (pMatrix && *pMatrix) {
+            DWORD m = *pMatrix;
+            // Right vector (matrix row 0)
+            *(float*)(m + 0x00) =  cosH;
+            *(float*)(m + 0x04) = -sinH;
+            *(float*)(m + 0x08) =  0.0f;
+            // Forward/At vector (matrix row 1)
+            *(float*)(m + 0x10) =  sinH;
+            *(float*)(m + 0x14) =  cosH;
+            *(float*)(m + 0x18) =  0.0f;
+            // Up vector (matrix row 2)
+            *(float*)(m + 0x20) =  0.0f;
+            *(float*)(m + 0x24) =  0.0f;
+            *(float*)(m + 0x28) =  1.0f;
+        }
+        // SA internal rotation cache (m_fCurrentRotation / m_fTargetRotation)
+        // SA stores these as radians where 0 = facing +Y (same as our angle=0=north)
+        if (!IsBadWritePtr((void*)(ped + 0x558), 8)) {
+            *(float*)(ped + 0x558) = rad; // m_fCurrentRotation
+            *(float*)(ped + 0x55C) = rad; // m_fTargetRotation
+        }
+    }
+
     inline void TeleportVehicle(float x, float y, float z) {
         DWORD vehicle = GetPlayerVehicle();
         if (!vehicle) return;
