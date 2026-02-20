@@ -128,7 +128,7 @@ namespace AutoLogin {
     }
 
     // Respond to a dialog: set input text (if needed) + close
-    static bool RespondToDialog(int dialogType, const char* inputText) {
+    static bool RespondToDialog(int dialogType, const char* inputText, bool useCancel = false) {
         if (dialogType == 1 || dialogType == 3) {
             // DIALOG_INPUT (1) or DIALOG_PASSWORD (3) — need to set text
             bool textSet = SAMP::SetDialogInputText(inputText);
@@ -141,8 +141,8 @@ namespace AutoLogin {
                 Sleep(100);
             }
         }
-        // Close with Accept (button 1)
-        return SAMP::CloseDialog(1);
+        // Close: 1=Accept (left button), 0=Cancel (right button)
+        return SAMP::CloseDialog(useCancel ? 0 : 1);
     }
 
     // ════════════════════════════════════════════════════════
@@ -270,15 +270,17 @@ namespace AutoLogin {
                 Game::Log("[LOGIN] → Responding LIST/SELECT (accept first)");
             }
             else {
-                // MESSAGEBOX or unknown — just accept
+                // MESSAGEBOX or unknown — respond with CANCEL (right button)
                 inputText = "";
-                Game::Log("[LOGIN] → Responding ACCEPT (msgbox/welcome)");
+                Game::Log("[LOGIN] → Responding CANCEL (msgbox/welcome)");
             }
 
             s_Phase = Phase::RESPONDING;
             s_PhaseTime = now;
 
-            bool ok = RespondToDialog(dlgType, inputText);
+            // MSGBOX (type 0) → use Cancel button; everything else → Accept
+            bool useCancel = (dlgType == 0);
+            bool ok = RespondToDialog(dlgType, inputText, useCancel);
             s_LastRespondedID = s_LastDialogID;
 
             if (ok) {

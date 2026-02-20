@@ -3697,3 +3697,4 @@ v0.3.DL-R1, (C)2005-2018 SA-MP Team
 [16:00:49] [LOGIN] Password recibido (len=16)
 [16:00:51] [LOGIN] Personaje seleccionado: slot 0
 [16:00:53] [LOGIN] Jugador 0 login completo — spawning
+[16:03:05] [part] Holas has left the server (0:0)

@@ -35,9 +35,10 @@ static HANDLE g_Watchdog  = NULL;
 //   (ID: 22) Helper BLK (dudas: 1)
 //
 // Logic:
-//   - Lines containing "Admin" or "Moderator" (but NOT "Helper") = real admins
-//   - If 0 real admins → safe to run
-//   - If any real admins → pause route, keep checking every minute
+//   - Lines containing "(ID:" = staff members (Admin, Moderator, Helper)
+//   - ALL staff count as "admins" for safety purposes
+//   - If 0 staff → safe to run
+//   - If any staff → pause route, keep checking every 30s
 // ════════════════════════════════════════════════════════════
 namespace AdminCheck {
     enum class Phase { IDLE, SNAPSHOT, SENDING, WAITING, EVALUATING };
@@ -98,9 +99,10 @@ namespace AdminCheck {
         return false;
     }
 
-    // Read new chatlog content and count REAL admin lines.
+    // Read new chatlog content and count ALL staff members.
+    // Any line with "(ID:" that is NOT the header = staff online.
     // Returns -1 if chatlog could not be read (treat as "unknown").
-    // Returns 0 if no admins, >0 if admins found.
+    // Returns 0 if no staff, >0 if staff found.
     static int CountRealAdmins() {
         DWORD sz = GetSize();
         Game::Log("[ADMIN] Chatlog size: pre=%lu, now=%lu, path=%s", s_PreSize, sz, s_Path);
@@ -139,7 +141,7 @@ namespace AdminCheck {
         // Log entire content for debugging
         Game::Log("[ADMIN] Raw content: %.500s", buf);
 
-        int adminCount = 0;
+        int staffCount = 0;
         bool gotResponse = false; // did we see ANY /admins response?
 
         char* line = buf;
@@ -152,21 +154,16 @@ namespace AdminCheck {
                 if (nl) { line = nl + 1; continue; } else break;
             }
 
-            // Detect /admins response (header or "no hay")
-            if (StrContainsCI(line, "ADMINISTRADORES") || StrContainsCI(line, "No hay administradores")) {
+            // Detect header
+            if (StrContainsCI(line, "ADMINISTRADORES")) {
                 gotResponse = true;
-                Game::Log("[ADMIN] Response line: %s", line);
+                Game::Log("[ADMIN] Header: %s", line);
             }
-            // Skip helper lines
-            else if (StrContainsCI(line, "Helper")) {
-                Game::Log("[ADMIN] Helper (skip): %s", line);
-            }
-            // Real admin: contains "Admin" or "Moderator" and "(ID:"
-            else if (StrContainsCI(line, "(ID:") &&
-                     (StrContainsCI(line, "Admin") || StrContainsCI(line, "Moderator"))) {
-                adminCount++;
+            // Any line with "(ID:" = a staff member (Admin, Moderator, OR Helper)
+            else if (StrContainsCI(line, "(ID:")) {
+                staffCount++;
                 gotResponse = true;
-                Game::Log("[ADMIN] *** ADMIN FOUND: %s", line);
+                Game::Log("[ADMIN] *** STAFF FOUND: %s", line);
             }
 
             if (nl) { line = nl + 1; } else { break; }
@@ -177,7 +174,7 @@ namespace AdminCheck {
             return -1;
         }
 
-        return adminCount;
+        return staffCount;
     }
 
     static void Begin(bool periodic) {
@@ -214,14 +211,14 @@ namespace AdminCheck {
             adminCount = CountRealAdmins();
             if (adminCount < 0) {
                 // Could not read chatlog or no response — assume no admins
-                Game::Log("[ADMIN] Chatlog read failed — assuming NO admins");
+                Game::Log("[ADMIN] Chatlog read failed — assuming NO staff");
                 adminCount = 0;
                 s_AdminsOnline = false;
             } else {
                 s_AdminsOnline = (adminCount > 0);
             }
             adminsOnline = s_AdminsOnline;
-            Game::Log("[ADMIN] Result: %d real admins → %s", adminCount, s_AdminsOnline ? "ONLINE" : "offline");
+            Game::Log("[ADMIN] Result: %d staff online → %s", adminCount, s_AdminsOnline ? "BLOCKED" : "SAFE");
             s_Phase = Phase::IDLE;
             s_LastPeriodic = GetTickCount();
             return true;
