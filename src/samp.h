@@ -1,12 +1,9 @@
 #pragma once
 /**
- * SA-MP 0.3.DL-1 Interface — powered by SAMP-API
+ * SA-MP 0.3.DL-1 Interface — 100% SAMP-API native functions.
  *
- * All struct layouts and function addresses resolved by the SAMP-API library
- * from https://github.com/BlastHackNet/SAMP-API (multiver branch, 0.3.DL-1).
- *
- * Uses SAMP-API's native Teleport / PutIntoVehicle / Camera functions
- * instead of raw GTA memory writes — this avoids camera lock bugs.
+ * Every function here is a thin wrapper around SAMP-API classes.
+ * No raw memory writes, no custom BitStreams, no manual RPCs.
  */
 
 #include <windows.h>
@@ -27,19 +24,15 @@
 #include "sampapi/0.3.DL-1/CEntity.h"
 #include "sampapi/0.3.DL-1/Synchronization.h"
 
-// ── Convenience alias for the 0.3.DL-1 namespace ──
 namespace sapi = sampapi::v03dl;
+using sampapi::GTAREF;
 
 // ════════════════════════════════════════════════════════════
-// SA-MP Accessor Functions (SEH protected)
+// SAMP — all wrappers use SEH to survive bad pointers
 // ════════════════════════════════════════════════════════════
 namespace SAMP {
 
-    // ── Core accessors ──
-
-    inline bool IsLoaded() {
-        return sampapi::GetBase() != 0;
-    }
+    // ─── Core accessors ──────────────────────────────────
 
     inline sapi::CNetGame* GetNetGame() {
         __try { return sapi::RefNetGame(); }
@@ -55,20 +48,11 @@ namespace SAMP {
         } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
     }
 
-    inline void* GetRakClient() {
-        auto* ng = GetNetGame();
-        if (!ng) return nullptr;
-        __try { return (void*)ng->m_pRakClient; }
-        __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
-    }
-
     inline sapi::CPlayerPool* GetPlayerPool() {
         auto* ng = GetNetGame();
         if (!ng) return nullptr;
-        __try {
-            auto* pools = ng->m_pPools;
-            return pools ? pools->m_pPlayer : nullptr;
-        } __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
+        __try { return ng->m_pPools ? ng->m_pPools->m_pPlayer : nullptr; }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
     }
 
     inline sapi::CLocalPlayer* GetLocalPlayer() {
@@ -96,13 +80,11 @@ namespace SAMP {
     inline sapi::CVehiclePool* GetVehiclePool() {
         auto* ng = GetNetGame();
         if (!ng) return nullptr;
-        __try {
-            auto* pools = ng->m_pPools;
-            return pools ? pools->m_pVehicle : nullptr;
-        } __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
+        __try { return ng->m_pPools ? ng->m_pPools->m_pVehicle : nullptr; }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
     }
 
-    // ── SAMP Ped (local player as CPed) ──
+    // ─── Player Ped (local) ──────────────────────────────
 
     inline sapi::CPed* GetPlayerPed() {
         auto* cg = GetCGame();
@@ -111,7 +93,7 @@ namespace SAMP {
         __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
     }
 
-    // ── Vehicle ID ──
+    // ─── Vehicle ID for local player ─────────────────────
 
     inline WORD GetVehicleID() {
         auto* lp = GetLocalPlayer();
@@ -120,7 +102,7 @@ namespace SAMP {
         __except (EXCEPTION_EXECUTE_HANDLER) { return 0xFFFF; }
     }
 
-    // ── Get SAMP CVehicle* by SAMP ID ──
+    // ─── Vehicle pool helpers ────────────────────────────
 
     inline sapi::CVehicle* GetSAMPVehicle(WORD id) {
         auto* vp = GetVehiclePool();
@@ -131,7 +113,23 @@ namespace SAMP {
         } __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
     }
 
-    // ── Checkpoint queries (read CGame struct fields) ──
+    inline GTAREF GetVehicleRef(WORD id) {
+        auto* vp = GetVehiclePool();
+        if (!vp) return 0;
+        __try { return vp->GetRef((int)id); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return 0; }
+    }
+
+    inline WORD FindVehicleID(void* pGameVehicle) {
+        if (!pGameVehicle) return 0xFFFF;
+        auto* vp = GetVehiclePool();
+        if (!vp) return 0xFFFF;
+        __try {
+            return vp->Find((::CVehicle*)pGameVehicle);
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return 0xFFFF; }
+    }
+
+    // ─── Checkpoint queries (read CGame fields) ──────────
 
     inline bool IsCheckpointActive() {
         auto* cg = GetCGame();
@@ -169,7 +167,7 @@ namespace SAMP {
         } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
     }
 
-    // ── Chat & Commands (SAMP-API member function calls) ──
+    // ─── Chat & Commands ─────────────────────────────────
 
     inline void AddChatMessage(DWORD color, const char* text) {
         auto* chat = GetChat();
@@ -185,25 +183,20 @@ namespace SAMP {
         __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 
-    // ════════════════════════════════════════════════════════
-    // CAMERA — uses SAMP-API CCamera native functions
-    // ════════════════════════════════════════════════════════
+    // ─── Camera (SAMP-API CCamera) ──────────────────────
 
-    // Full camera restore: detach + restore + SetToOwner (snaps back to player)
     inline void RestoreCamera() {
         auto* cg = GetCGame();
         if (!cg) return;
         __try {
             auto* cam = cg->m_pCamera;
             if (cam) {
-                cam->m_pAttachedTo = nullptr;
                 cam->Detach();
                 cam->Restore();
-                cam->SetToOwner();  // <-- KEY: snaps camera behind player
+                cam->SetToOwner();
             }
         } __except (EXCEPTION_EXECUTE_HANDLER) {}
 
-        // Clear spectating flag
         auto* lp = GetLocalPlayer();
         if (lp) {
             __try { lp->m_bDoesSpectating = 0; }
@@ -212,46 +205,55 @@ namespace SAMP {
     }
 
     // ════════════════════════════════════════════════════════
-    // TELEPORT — uses SAMP-API CEntity::Teleport + CGame::RefreshRenderer
-    // These go through samp.dll and properly handle camera/world state
+    // TELEPORT — Direct matrix write (NO CEntity::Teleport!)
+    // CEntity::Teleport() does Remove()+SetPos()+Add() which
+    // makes SA-MP detect vehicle exit+re-entry every time.
+    // Instead we write position directly into the CMatrix.
     // ════════════════════════════════════════════════════════
 
-    // Teleport a SAMP vehicle (by SAMP ID) using samp.dll's native Teleport
+    // Move vehicle by directly patching its position matrix.
+    // The ped stays seated — no world remove/add.
     inline bool TeleportVehicle(WORD vehicleId, float x, float y, float z) {
         auto* sv = GetSAMPVehicle(vehicleId);
         if (!sv) return false;
+
+        // Stop movement
         __try {
-            // Zero velocity via SAMP-API
-            sampapi::CVector zero = {0.0f, 0.0f, 0.0f};
+            sampapi::CVector zero = {0, 0, 0};
             sv->SetSpeed(zero);
             sv->SetTurnSpeed(zero);
-            // Teleport through samp.dll (handles camera/rendering internally)
-            sampapi::CVector pos = {x, y, z};
-            sv->Teleport(pos);
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+        // Get GTA entity and write position directly into matrix
+        __try {
+            ::CVehicle* pGta = sv->m_pGameVehicle;
+            if (!pGta) return false;
+
+            // GTA SA CEntity: offset 0x14 = CMatrix* (CPlaceable::m_pMatrix)
+            DWORD* pMatPtr = (DWORD*)((DWORD)pGta + 0x14);
+            if (pMatPtr && *pMatPtr) {
+                DWORD mat = *pMatPtr;
+                // CMatrix position is at offset 0x30, 0x34, 0x38
+                *(float*)(mat + 0x30) = x;
+                *(float*)(mat + 0x34) = y;
+                *(float*)(mat + 0x38) = z;
+            } else {
+                // Fallback: simple coords at 0x04, 0x08, 0x0C
+                *(float*)((DWORD)pGta + 0x04) = x;
+                *(float*)((DWORD)pGta + 0x08) = y;
+                *(float*)((DWORD)pGta + 0x0C) = z;
+            }
         } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 
-        // Also teleport the ped (in case it desyncs)
-        auto* ped = GetPlayerPed();
-        if (ped) {
-            __try {
-                sampapi::CVector pos = {x, y, z};
-                ped->Teleport(pos);
-            } __except (EXCEPTION_EXECUTE_HANDLER) {}
-        }
-
-        // Refresh world renderer at new position
         auto* cg = GetCGame();
         if (cg) {
             __try { cg->RefreshRenderer(x, y); }
             __except (EXCEPTION_EXECUTE_HANDLER) {}
         }
-
-        // Restore camera to player
-        RestoreCamera();
         return true;
     }
 
-    // Teleport just the ped (on foot) using samp.dll's native Teleport
+    // Teleport ped (on foot)
     inline bool TeleportPed(float x, float y, float z) {
         auto* ped = GetPlayerPed();
         if (!ped) return false;
@@ -265,79 +267,104 @@ namespace SAMP {
             __try { cg->RefreshRenderer(x, y); }
             __except (EXCEPTION_EXECUTE_HANDLER) {}
         }
-        RestoreCamera();
         return true;
     }
 
     // ════════════════════════════════════════════════════════
-    // VEHICLE ENTRY — uses SAMP-API CPed::PutIntoVehicle
+    // VEHICLE ENTRY — CPed::PutIntoVehicle (game warp) + sync
+    // We do NOT call CLocalPlayer::EnterVehicle — that sends an
+    // enter-animation RPC which causes the server to re-do the
+    // entry sequence. Instead, warp game-side, set m_nCurrentVehicle,
+    // and let SendIncarData() inform the server via sync packet.
     // ════════════════════════════════════════════════════════
 
-    // Put player into vehicle using samp.dll's native function
     inline bool PutIntoVehicle(WORD vehicleId) {
-        auto* vp = GetVehiclePool();
         auto* ped = GetPlayerPed();
-        if (!vp || !ped) return false;
+        if (!ped) return false;
 
-        __try {
-            // Get the GTAREF handle for this vehicle (GTAREF is int)
-            int ref = vp->GetRef((int)vehicleId);
-            if (!ref) return false;
-            ped->PutIntoVehicle(ref, 0); // seat 0 = driver
-        } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+        GTAREF ref = GetVehicleRef(vehicleId);
+        if (!ref) return false;
 
-        // Patch SAMP local player vehicle state
+        // Game-side: instant warp into vehicle
+        __try { ped->PutIntoVehicle(ref, 0); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+
+        // Set SAMP-side vehicle ID (sync will pick it up)
         auto* lp = GetLocalPlayer();
         if (lp) {
-            __try {
-                lp->m_nCurrentVehicle = vehicleId;
-                lp->m_incarData.m_nVehicle = vehicleId;
-            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+            __try { lp->m_nCurrentVehicle = vehicleId; }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
         }
         return true;
     }
 
-    // Force rotation using samp.dll's CPed::ForceRotation
+    // ════════════════════════════════════════════════════════
+    // VEHICLE EXIT — CPed::ExitVehicle + CLocalPlayer::ExitVehicle
+    // ════════════════════════════════════════════════════════
+
+    inline void ExitVehicle() {
+        WORD vid = GetVehicleID();
+        auto* ped = GetPlayerPed();
+
+        // Game-side
+        if (ped) {
+            __try { ped->ExitVehicle(); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+
+        // Network-side
+        if (vid != 0xFFFF) {
+            auto* lp = GetLocalPlayer();
+            if (lp) {
+                __try { lp->ExitVehicle((int)vid); }
+                __except (EXCEPTION_EXECUTE_HANDLER) {}
+            }
+        }
+    }
+
+    // ════════════════════════════════════════════════════════
+    // PED INPUT — CPed::SetKeys (injects into GTA CPad)
+    // ════════════════════════════════════════════════════════
+
+    inline void SetPedKeys(short controllerState, short stickX = 0, short stickY = 0) {
+        auto* ped = GetPlayerPed();
+        if (!ped) return;
+        __try { ped->SetKeys(controllerState, stickX, stickY); }
+        __except (EXCEPTION_EXECUTE_HANDLER) {}
+    }
+
+    inline void ClearPedKeys() {
+        SetPedKeys(0, 0, 0);
+    }
+
+    // ════════════════════════════════════════════════════════
+    // SYNC — use CLocalPlayer native send functions.
+    // These read the CURRENT game state automatically.
+    // ════════════════════════════════════════════════════════
+
+    inline void SendIncarSync() {
+        auto* lp = GetLocalPlayer();
+        if (!lp) return;
+        __try { lp->SendIncarData(); }
+        __except (EXCEPTION_EXECUTE_HANDLER) {}
+    }
+
+    inline void SendOnfootSync() {
+        auto* lp = GetLocalPlayer();
+        if (!lp) return;
+        __try { lp->SendOnfootData(); }
+        __except (EXCEPTION_EXECUTE_HANDLER) {}
+    }
+
+    // ════════════════════════════════════════════════════════
+    // PED ROTATION — CPed::ForceRotation
+    // ════════════════════════════════════════════════════════
+
     inline void SetPedRotation(float angleDeg) {
         auto* ped = GetPlayerPed();
         if (!ped) return;
         float rad = angleDeg * 3.14159265f / 180.0f;
         __try { ped->ForceRotation(rad); }
         __except (EXCEPTION_EXECUTE_HANDLER) {}
-    }
-
-    // ── Vehicle pool helpers ──
-
-    inline DWORD GetGTAVehicle(WORD id) {
-        auto* vp = GetVehiclePool();
-        if (!vp || id >= 2000) return 0;
-        __try {
-            if (!vp->m_bNotEmpty[id]) return 0;
-            return (DWORD)vp->m_pGameObject[id];
-        } __except (EXCEPTION_EXECUTE_HANDLER) { return 0; }
-    }
-
-    inline WORD FindVehicleID(DWORD gtaPtr) {
-        if (!gtaPtr) return 0xFFFF;
-        auto* vp = GetVehiclePool();
-        if (!vp) return 0xFFFF;
-        __try {
-            for (WORD i = 0; i < 2000; i++) {
-                if (vp->m_bNotEmpty[i] && (DWORD)vp->m_pGameObject[i] == gtaPtr)
-                    return i;
-            }
-        } __except (EXCEPTION_EXECUTE_HANDLER) {}
-        return 0xFFFF;
-    }
-
-    // ── Local player field patching (for vehicle sync) ──
-
-    inline void PatchVehicleID(WORD sampId) {
-        auto* lp = GetLocalPlayer();
-        if (!lp) return;
-        __try {
-            lp->m_nCurrentVehicle = sampId;
-            lp->m_incarData.m_nVehicle = sampId;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
 }

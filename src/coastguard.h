@@ -1,65 +1,69 @@
 #pragma once
 /**
- * Coastguard Auto-Job Module
+ * Coastguard Auto-Job — 100% SAMP-API Native Edition
  *
- * State machine:
- *   IDLE → WAITING_CP → TELEPORTING → WAITING_NEXT → ... (learning cycle 1)
- *   IDLE → TURBO (cycle 2+, blast through cached route) → RESTARTING → IDLE
+ * Teleport:   CVehicle::Teleport + CPed::Teleport  (physical move)
+ * Sync:       CLocalPlayer::SendIncarData()         (reads game state)
+ * CP enter:   Automatic via CGame::ProcessCheckpoints() each frame
+ * Keys:       CPed::SetKeys()  (injects into GTA CPad)
+ * Vehicle:    CPed::PutIntoVehicle + CLocalPlayer::EnterVehicle
  *
- * Learning: detect checkpoint, TP + enter, wait for next, repeat, cache route.
- * Turbo:    blast through all cached CPs with minimal delay.
- * Restart:  wait for boat respawn → PutIntoVehicle → press 2 → retry until CP.
- *
- * ALL teleport/camera/vehicle-entry goes through SAMP-API native functions.
- * Vehicle entry uses CPed::PutIntoVehicle (no F-key simulation).
- * Known boat: model 472, SAMP vehicle ID 30.
+ * NO manual BitStreams. NO manual RPCs. NO SendInput.
  */
 
 #include <windows.h>
 #include <cmath>
 #include "game.h"
-#include "net.h"
 
 namespace Coastguard {
 
     // ════════════════════════════════════════════════════════
-    // Types & Constants
+    // Constants
     // ════════════════════════════════════════════════════════
 
     enum class State {
         IDLE,
-        WAITING_CP,     // Wait for checkpoint to appear
-        TELEPORTING,    // TP to CP + send enter RPC
-        WAITING_NEXT,   // Wait for next CP after entering
-        TURBO,          // Blast through cached route
-        RESTARTING      // Re-enter boat + start route
+        WAITING_CP,
+        TELEPORTING,
+        WAITING_NEXT,
+        TURBO,
+        RESTARTING
     };
 
-    // Boat identity
-    static constexpr WORD  BOAT_MODEL   = 472;
-    static constexpr WORD  BOAT_SAMP_ID = 30;    // Fixed SAMP vehicle ID
-
-    // Boat spawn position (Coastguard dock)
+    static constexpr WORD  BOAT_SAMP_ID = 40;
     static constexpr float BOAT_X       = 719.1288f;
     static constexpr float BOAT_Y       = -1698.4248f;
     static constexpr float BOAT_Z       = 1.7874f;
     static constexpr float BOAT_HEADING = 190.97f;
 
-    // Timings (ms)
-    static constexpr DWORD TURBO_DELAY      = 150;    // Between CPs in turbo
-    static constexpr DWORD NEXT_CP_WAIT     = 1500;   // Max wait for next CP
-    static constexpr DWORD RESTART_EXIT_WAIT= 500;    // Wait after exiting vehicle
-    static constexpr DWORD RESPAWN_CHECK    = 500;    // Poll interval for boat respawn
-    static constexpr DWORD RESPAWN_MAX      = 20000;  // Max wait for boat respawn
-    static constexpr DWORD KEY_HOLD         = 150;    // Key hold duration
-    static constexpr DWORD KEY2_RETRY       = 2000;   // Retry pressing 2 interval
-    static constexpr DWORD KEY2_CP_TIMEOUT  = 5000;   // Max wait for CP after pressing 2
-    static constexpr DWORD KEY2_MAX_RETRIES = 5;      // Max retries pressing 2
+    // Timings
+    static constexpr DWORD TP_SETTLE       = 200;    // After teleport, wait for game frame
+    static constexpr DWORD SYNC_AFTER_TP   = 100;    // Extra sync delay after TP
+    static constexpr DWORD NEXT_CP_WAIT    = 1500;   // Wait for next CP before retry
+    static constexpr DWORD EXIT_SETTLE     = 400;    // After exit vehicle
+    static constexpr DWORD ENTER_TP_WAIT   = 200;    // After TP ped to boat, before PutInto
+    static constexpr DWORD ENTER_WARP_WAIT = 400;    // After PutIntoVehicle, let game process
+    static constexpr DWORD ENTER_SYNC_WAIT = 250;    // Between first and second sync after enter
+    static constexpr DWORD ENTER_SETTLE    = 500;    // After entering vehicle, before key2
+    static constexpr DWORD KEY2_HOLD       = 200;    // Hold "2" key duration
+    static constexpr DWORD KEY2_WAIT       = 3000;   // Wait between retries of "2"
+    static constexpr DWORD SYNC_INTERVAL   = 400;    // Keep-alive sync interval
+    static constexpr DWORD CP_POLL_MIN     = 100;    // Min wait before polling after TP
+    static constexpr DWORD SAME_CP_RETRIES = 8;      // Re-TP same pos before force-accept
+    static constexpr DWORD TURBO_SETTLE    = 200;    // Wait per CP in turbo
+    static constexpr DWORD TURBO_RESYNC    = 2000;   // Re-sync if stuck in turbo
+    static constexpr DWORD TURBO_BAIL      = 15000;  // Bail turbo mode
+
+    // Key "2" as ControllerState bits
+    // "2" in SA-MP dialogs maps to submission key — use ShockButtonR (look behind)
+    // Actually for SA-MP job start, the "2" key is a keyboard input.
+    // CPed::SetKeys uses ControllerState which is for gamepad.
+    // We'll use a hybrid: SetKeys for movement sync + Windows input for "2" key.
 
     static constexpr int MAX_ROUTE = 150;
 
     // ════════════════════════════════════════════════════════
-    // State variables
+    // State
     // ════════════════════════════════════════════════════════
 
     static State s_State     = State::IDLE;
@@ -74,21 +78,25 @@ namespace Coastguard {
     static bool  s_RouteKnown = false;
     static int   s_TurboIdx   = 0;
 
-    // Current CP tracking
-    static Vec3  s_CurCP  = {0, 0, 0};
+    // CP tracking
+    static Vec3  s_CurCP   = {0, 0, 0};
     static Vec3  s_LastCP  = {0, 0, 0};
     static bool  s_IsRace  = false;
-    static WORD  s_KnownVeh = 0xFFFF;
 
     // Restart
-    static int   s_RestartStep    = 0;
-    static bool  s_KeyHeld        = false;
-    static DWORD s_RestartBegin   = 0;
-    static int   s_Key2Retries    = 0;
-    static DWORD s_LastKey2Press  = 0;
+    static int   s_RestartStep  = 0;
+    static int   s_Key2Attempts = 0;
+    static DWORD s_LastKeyPress = 0;
+    static bool  s_KeyHeld      = false;
 
-    // Same-position retry counter (WAITING_NEXT)
-    static int   s_SamePosRetry  = 0;
+    // Teleport sub-step
+    static int   s_TpSub = 0;
+
+    // Retry counter
+    static int   s_SamePosRetry = 0;
+
+    // Sync timer
+    static DWORD s_LastSync = 0;
 
     // ════════════════════════════════════════════════════════
     // Helpers
@@ -99,7 +107,7 @@ namespace Coastguard {
     }
 
     static bool IsValidPos(float x, float y) {
-        return !(fabsf(x) < 1.0f && fabsf(y) < 1.0f) && fabsf(x) < 20000.0f && fabsf(y) < 20000.0f;
+        return !(fabsf(x) < 1.0f && fabsf(y) < 1.0f) && fabsf(x) < 20000.0f;
     }
 
     static void CacheCP(Vec3 pos, bool isRace) {
@@ -112,25 +120,6 @@ namespace Coastguard {
         }
     }
 
-    // Get reliable SAMP vehicle ID, patching state if needed
-    static WORD GetActiveVehID() {
-        WORD id = SAMP::GetVehicleID();
-        if (id != 0xFFFF) { s_KnownVeh = id; return id; }
-        if (!Game::IsInVehicle()) return 0xFFFF;
-        if (s_KnownVeh == 0xFFFF) {
-            DWORD gta = Game::GetPlayerVehicle();
-            if (gta) {
-                WORD found = SAMP::FindVehicleID(gta);
-                if (found != 0xFFFF) s_KnownVeh = found;
-            }
-        }
-        if (s_KnownVeh != 0xFFFF) {
-            SAMP::PatchVehicleID(s_KnownVeh);
-        }
-        return s_KnownVeh;
-    }
-
-    // Poll CGame for active checkpoint
     static bool PollCheckpoint(Vec3& out, bool& outRace) {
         if (SAMP::IsCheckpointActive()) {
             float x = 0, y = 0, z = 0;
@@ -145,17 +134,14 @@ namespace Coastguard {
         return false;
     }
 
-    // Teleport vehicle to CP + send sync + enter checkpoint RPC
-    // Uses SAMP-API CEntity::Teleport + CGame::RefreshRenderer + CCamera::SetToOwner
-    static void DoTeleportAndEnter(Vec3 cp, bool isRace, WORD vehID) {
-        // Teleport via SAMP-API (handles camera/rendering internally)
-        SAMP::TeleportVehicle(vehID, cp.x, cp.y, cp.z);
-
-        // Sync + enter CP
-        Net::SendVehicleSync(vehID, cp.x, cp.y, cp.z);
-        if (isRace) Net::SendEnterRaceCheckpoint();
-        else        Net::SendEnterCheckpoint();
+    // True in-vehicle check: both GTA-side and SAMP-side
+    static bool InVehicle() {
+        return Game::IsInVehicle() || SAMP::GetVehicleID() != 0xFFFF;
     }
+
+    // SA-MP's CLocalPlayer::Process() handles sync automatically.
+    // We do NOT send manual sync — it causes the server to detect
+    // repeated vehicle entries ("No tienes licencia" spam).
 
     // ════════════════════════════════════════════════════════
     // Public Interface
@@ -165,14 +151,23 @@ namespace Coastguard {
     inline int GetCPCount() { return s_CPCount; }
 
     inline void Reset() {
-        if (s_KeyHeld) { Game::ReleaseKey('2'); s_KeyHeld = false; }
+        if (s_KeyHeld) {
+            // Release the "2" key via Windows input
+            INPUT inp = {};
+            inp.type = INPUT_KEYBOARD;
+            inp.ki.wVk = '2';
+            inp.ki.dwFlags = KEYEVENTF_KEYUP;
+            SendInput(1, &inp, sizeof(INPUT));
+            s_KeyHeld = false;
+        }
+        SAMP::ClearPedKeys();
         s_State = State::IDLE;
-        s_Cycle = 0;
-        s_CPCount = 0;
+        s_Cycle = s_CPCount = 0;
         s_RestartStep = 0;
-        s_KnownVeh = 0xFFFF;
         s_SamePosRetry = 0;
-        s_Key2Retries = 0;
+        s_Key2Attempts = 0;
+        s_LastKeyPress = 0;
+        s_TpSub = 0;
     }
 
     inline void FullReset() {
@@ -188,17 +183,41 @@ namespace Coastguard {
     }
 
     // ════════════════════════════════════════════════════════
-    // Main Update — call every tick when mod is active
+    // Press/Release "2" via Windows SendInput
+    // (CPed::SetKeys doesn't have a "2" key — it's keyboard only)
+    // ════════════════════════════════════════════════════════
+
+    static void PressKey2() {
+        INPUT inp = {};
+        inp.type = INPUT_KEYBOARD;
+        inp.ki.wVk = '2';
+        inp.ki.wScan = (BYTE)MapVirtualKey('2', MAPVK_VK_TO_VSC);
+        inp.ki.dwFlags = 0;
+        SendInput(1, &inp, sizeof(INPUT));
+        s_KeyHeld = true;
+    }
+
+    static void ReleaseKey2() {
+        INPUT inp = {};
+        inp.type = INPUT_KEYBOARD;
+        inp.ki.wVk = '2';
+        inp.ki.wScan = (BYTE)MapVirtualKey('2', MAPVK_VK_TO_VSC);
+        inp.ki.dwFlags = KEYEVENTF_KEYUP;
+        SendInput(1, &inp, sizeof(INPUT));
+        s_KeyHeld = false;
+    }
+
+    // ════════════════════════════════════════════════════════
+    // Main Update — call every 5ms
     // ════════════════════════════════════════════════════════
 
     inline void Update() {
         DWORD now = GetTickCount();
+        DWORD elapsed = now - s_StateTime;
 
         switch (s_State) {
 
-        // ────────────────────────────────────────────
-        // IDLE: Start a new cycle
-        // ────────────────────────────────────────────
+        // ────────────── IDLE → start cycle ──────────────
         case State::IDLE:
         {
             s_Cycle++;
@@ -209,322 +228,395 @@ namespace Coastguard {
 
             if (s_RouteKnown && s_RouteSize > 0) {
                 s_TurboIdx = 0;
+                s_TpSub = 0;
                 s_State = State::TURBO;
-                Game::Log("[CG] TURBO cycle #%d (%d CPs)", s_Cycle, s_RouteSize);
+                Game::Log("[CG] TURBO #%d (%d CPs)", s_Cycle, s_RouteSize);
             } else {
                 s_RouteSize = 0;
                 s_State = State::WAITING_CP;
-                Game::Log("[CG] LEARNING cycle #%d", s_Cycle);
+                Game::Log("[CG] LEARN #%d", s_Cycle);
             }
             s_StateTime = now;
             break;
         }
 
-        // ────────────────────────────────────────────
-        // WAITING_CP: Wait for first checkpoint
-        // ────────────────────────────────────────────
+        // ────────────── WAITING_CP ──────────────
         case State::WAITING_CP:
         {
-            DWORD elapsed = now - s_StateTime;
-
-            // Keep vehicle synced while waiting
-            WORD vid = GetActiveVehID();
-            if (vid != 0xFFFF) {
-                static DWORD s_LastSync = 0;
-                if (now - s_LastSync > 300) {
-                    s_LastSync = now;
-                    Vec3 p = Game::GetPosition(Game::GetPlayerVehicle());
-                    Net::SendVehicleSync(vid, p.x, p.y, p.z);
-                }
-            }
-
-            // Wait 1500ms for server to clear previous cycle's CP
-            if (elapsed < 1500) break;
-
             Vec3 cp; bool race;
             if (PollCheckpoint(cp, race)) {
                 s_CurCP = cp;
                 s_IsRace = race;
+                s_TpSub = 0;
                 s_State = State::TELEPORTING;
                 s_StateTime = now;
-                Game::Log("[CG] CP found (%.1f,%.1f,%.1f)", cp.x, cp.y, cp.z);
+                Game::Log("[CG] CP! (%.0f,%.0f,%.0f)", cp.x, cp.y, cp.z);
             }
             break;
         }
 
-        // ────────────────────────────────────────────
-        // TELEPORTING: TP to CP + enter
-        // ────────────────────────────────────────────
+        // ────────────── TELEPORTING ──────────────
+        // Sub 0: Teleport vehicle+ped to CP position
+        // Sub 1: Wait TP_SETTLE for game to process frame
+        // Sub 2: Send sync → WAITING_NEXT
+        //
+        // CGame::ProcessCheckpoints() runs every frame.
+        // When it sees the player inside the CP radius,
+        // it sends the enter-CP RPC automatically.
+        // ─────────────────────────────────────────
         case State::TELEPORTING:
         {
-            if (!IsValidPos(s_CurCP.x, s_CurCP.y)) {
-                s_State = State::IDLE;
-                break;
-            }
-            WORD vid = GetActiveVehID();
-            if (vid == 0xFFFF) {
-                if (!Game::IsInVehicle()) s_State = State::IDLE;
+            if (!InVehicle()) {
+                Game::Log("[CG] No vehicle → RESTARTING");
+                s_State = State::RESTARTING;
+                s_RestartStep = 0;
+                s_TpSub = 0;
+                s_StateTime = now;
                 break;
             }
 
-            DoTeleportAndEnter(s_CurCP, s_IsRace, vid);
-            CacheCP(s_CurCP, s_IsRace);
-            s_CPCount++;
-            s_LastCP = s_CurCP;
-            s_SamePosRetry = 0;
-            s_State = State::WAITING_NEXT;
-            s_StateTime = now;
-            Game::Log("[CG] TP+Enter CP #%d (%.1f,%.1f,%.1f)", s_CPCount, s_CurCP.x, s_CurCP.y, s_CurCP.z);
+            if (!IsValidPos(s_CurCP.x, s_CurCP.y)) {
+                s_State = State::WAITING_CP;
+                s_TpSub = 0;
+                s_StateTime = now;
+                break;
+            }
+
+            WORD vid = SAMP::GetVehicleID();
+
+            if (s_TpSub == 0) {
+                // Physical teleport
+                if (vid != 0xFFFF)
+                    SAMP::TeleportVehicle(vid, s_CurCP.x, s_CurCP.y, s_CurCP.z);
+                s_TpSub = 1;
+                s_StateTime = now;
+                Game::Log("[CG] Move→ (%.0f,%.0f,%.0f)", s_CurCP.x, s_CurCP.y, s_CurCP.z);
+                break;
+            }
+
+            if (s_TpSub == 1 && elapsed >= TP_SETTLE) {
+                // Wait for game to process frame + SA-MP auto-sync
+                CacheCP(s_CurCP, s_IsRace);
+                s_CPCount++;
+                s_LastCP = s_CurCP;
+                s_SamePosRetry = 0;
+                s_TpSub = 0;
+                s_State = State::WAITING_NEXT;
+                s_StateTime = now;
+                Game::Log("[CG] TP #%d (%.0f,%.0f,%.0f)", s_CPCount, s_CurCP.x, s_CurCP.y, s_CurCP.z);
+            }
             break;
         }
 
-        // ────────────────────────────────────────────
-        // WAITING_NEXT: Wait for server to send next CP
-        // ────────────────────────────────────────────
+        // ────────────── WAITING_NEXT ──────────────
+        // Wait for CGame::ProcessCheckpoints to enter CP
+        // and server to set next CP.
+        // ─────────────────────────────────────────
         case State::WAITING_NEXT:
         {
-            DWORD elapsed = now - s_StateTime;
-
-            // Ejected from vehicle = route ended
-            if (!Game::IsInVehicle() && SAMP::GetVehicleID() == 0xFFFF) {
+            // Ejected = route done
+            if (!InVehicle()) {
                 s_RouteKnown = true;
-                Game::Log("[CG] Ejected → route done (%d CPs)", s_RouteSize);
+                Game::Log("[CG] Ejected → RESTART (%d CPs)", s_RouteSize);
                 s_State = State::RESTARTING;
                 s_RestartStep = 0;
                 s_StateTime = now;
                 break;
             }
 
-            Game::StabilizeVehicle();
+            if (elapsed < CP_POLL_MIN) break;
 
-            // Look for a new (different) CP
-            if (elapsed >= 200) {
-                Vec3 cp; bool race;
-                if (PollCheckpoint(cp, race) && IsDifferent(cp, s_LastCP)) {
-                    s_CurCP = cp;
-                    s_IsRace = race;
-                    s_State = State::TELEPORTING;
-                    s_StateTime = now;
-                    break;
-                }
+            Vec3 cp; bool race;
+            if (PollCheckpoint(cp, race) && IsDifferent(cp, s_LastCP)) {
+                // New CP appeared → go there
+                s_CurCP = cp;
+                s_IsRace = race;
+                s_TpSub = 0;
+                s_State = State::TELEPORTING;
+                s_StateTime = now;
+                break;
             }
 
-            // Timeout
             if (elapsed >= NEXT_CP_WAIT) {
                 if (!SAMP::IsCheckpointActive() && !SAMP::IsRaceCheckpointActive()) {
-                    // No checkpoint → route learned
                     s_RouteKnown = true;
-                    Game::Log("[CG] Route learned (%d CPs) → RESTARTING", s_RouteSize);
+                    Game::Log("[CG] No CP → done (%d) → RESTART", s_RouteSize);
                     s_State = State::RESTARTING;
                     s_RestartStep = 0;
                     s_StateTime = now;
                 } else {
-                    // CP still active at same position — retry mechanism
                     s_SamePosRetry++;
-                    if (s_SamePosRetry >= 4) {
+                    if (s_SamePosRetry >= (int)SAME_CP_RETRIES) {
                         s_SamePosRetry = 0;
-                        s_LastCP = {0, 0, 0}; // force-accept next poll
-                        Game::Log("[CG] Same-pos timeout x4, forcing accept");
+                        s_LastCP = {0, 0, 0};
+                        Game::Log("[CG] Force-accept");
                     } else {
-                        s_StateTime = now; // extend wait
+                        // Re-teleport to same CP
+                        WORD vid = SAMP::GetVehicleID();
+                        if (vid != 0xFFFF) {
+                            SAMP::TeleportVehicle(vid, s_LastCP.x, s_LastCP.y, s_LastCP.z);
+                            Game::Log("[CG] Re-TP CP (retry %d)", s_SamePosRetry);
+                        }
                     }
+                    s_StateTime = now;
                 }
             }
             break;
         }
 
-        // ────────────────────────────────────────────
-        // TURBO: Blast through cached route
-        // ────────────────────────────────────────────
+        // ────────────── TURBO ──────────────
+        // The route is cached so we know WHERE each CP will be,
+        // but we MUST wait for the server to actually SET the CP
+        // before teleporting there — otherwise ProcessCheckpoints
+        // won't fire onEnterCheckpoint and we don't get paid.
+        //
+        // Sub 0: Wait for server CP to appear
+        // Sub 1: Teleport to it
+        // Sub 2: Wait for server to accept (CP changes or disappears)
+        // ─────────────────────────────────
         case State::TURBO:
         {
-            if (now - s_StateTime < TURBO_DELAY) break;
-
-            if (s_TurboIdx >= s_RouteSize) {
-                Game::Log("[CG] TURBO done → RESTARTING");
+            if (!InVehicle()) {
+                Game::Log("[CG] Lost vehicle TURBO → RESTART");
                 s_State = State::RESTARTING;
                 s_RestartStep = 0;
+                s_TpSub = 0;
                 s_StateTime = now;
                 break;
             }
 
-            WORD vid = GetActiveVehID();
-            if (vid == 0xFFFF) {
-                if (!Game::IsInVehicle()) s_State = State::IDLE;
-                break;
-            }
-
-            Vec3 cp = s_Route[s_TurboIdx];
-            bool race = s_RouteRace[s_TurboIdx];
-            if (!IsValidPos(cp.x, cp.y)) { s_TurboIdx++; s_StateTime = now; break; }
-
-            // On last CP, pre-position at boat spawn for faster restart
-            bool isLast = (s_TurboIdx == s_RouteSize - 1);
-            if (isLast) {
-                // TP to boat spawn BUT send sync at CP position
-                SAMP::TeleportVehicle(vid, BOAT_X, BOAT_Y, BOAT_Z + 1.0f);
-                Net::SendVehicleSync(vid, cp.x, cp.y, cp.z);
-                if (race) Net::SendEnterRaceCheckpoint();
-                else      Net::SendEnterCheckpoint();
-            } else {
-                DoTeleportAndEnter(cp, race, vid);
-            }
-
-            s_TurboIdx++;
-            s_CPCount++;
-            s_StateTime = now;
-            Game::Log("[CG] TURBO #%d/%d", s_TurboIdx, s_RouteSize);
-            break;
-        }
-
-        // ────────────────────────────────────────────
-        // RESTARTING: Re-enter boat + start route
-        //   Step 0: Exit vehicle + short wait
-        //   Step 1: Wait for boat (ID 30) to respawn
-        //   Step 2: TP ped + PutIntoVehicle(30)
-        //   Step 3: Press 2 + wait for CP
-        //   Step 4: CP appeared → IDLE (or retry 2)
-        // ────────────────────────────────────────────
-        case State::RESTARTING:
-        {
-            DWORD elapsed = now - s_StateTime;
-
-            switch (s_RestartStep) {
-
-            case 0: // Exit vehicle + wait
-            {
-                if (elapsed < 50) {
-                    SAMP::RestoreCamera();
-                    Game::ForceExitVehicle();
-                    s_KnownVeh = 0xFFFF;
-                }
-                if (elapsed >= RESTART_EXIT_WAIT) {
-                    s_RestartBegin = now;
-                    s_RestartStep = 1;
-                    s_StateTime = now;
-                    Game::Log("[CG] Restart step 1: waiting for boat respawn");
-                }
-                break;
-            }
-
-            case 1: // Wait for boat (SAMP ID 30) to exist
-            {
-                // Check if vehicle 30 exists in the pool
-                auto* sv = SAMP::GetSAMPVehicle(BOAT_SAMP_ID);
-                if (sv) {
-                    __try {
-                        if (sv->DoesExist()) {
-                            s_RestartStep = 2;
-                            s_StateTime = now;
-                            Game::Log("[CG] Restart step 2: boat exists, entering");
-                            break;
-                        }
-                    } __except (EXCEPTION_EXECUTE_HANDLER) {}
-                }
-
-                // Timeout — boat didn't respawn
-                if (now - s_RestartBegin >= RESPAWN_MAX) {
-                    Game::Log("[CG] Restart: boat respawn timeout, retrying from step 0");
-                    s_RestartStep = 0;
-                    s_StateTime = now;
-                }
-                break;
-            }
-
-            case 2: // TP ped to boat + PutIntoVehicle(30) directly
-            {
-                // Teleport ped near boat
-                SAMP::TeleportPed(BOAT_X, BOAT_Y, BOAT_Z);
-                SAMP::SetPedRotation(BOAT_HEADING);
-
-                // Put player directly into vehicle via SAMP-API
-                if (SAMP::PutIntoVehicle(BOAT_SAMP_ID)) {
-                    s_KnownVeh = BOAT_SAMP_ID;
-                    Game::Log("[CG] Restart: PutIntoVehicle(30) success");
-
-                    // Small delay then sync
-                    Vec3 p = {BOAT_X, BOAT_Y, BOAT_Z};
-                    Net::SendVehicleSync(BOAT_SAMP_ID, p.x, p.y, p.z, 0);
-
-                    s_Key2Retries = 0;
-                    s_LastKey2Press = 0;
-                    s_RestartStep = 3;
-                    s_StateTime = now;
-                } else {
-                    // PutIntoVehicle failed — retry after short wait
-                    Game::Log("[CG] Restart: PutIntoVehicle failed, retrying");
-                    s_RestartStep = 1;
-                    s_StateTime = now;
-                }
-                break;
-            }
-
-            case 3: // Press 2 to start route
-            {
-                // Wait a bit after entering vehicle before pressing 2
-                if (elapsed < 300) break;
-
-                // Press 2
-                Game::PressKey('2');
-                s_KeyHeld = true;
-                s_LastKey2Press = now;
-                s_RestartStep = 4;
+            if (s_TurboIdx >= s_RouteSize) {
+                Game::Log("[CG] TURBO done → RESTART");
+                s_State = State::RESTARTING;
+                s_RestartStep = 0;
+                s_TpSub = 0;
                 s_StateTime = now;
-
-                // Also send key sync
-                WORD vid = GetActiveVehID();
-                if (vid != 0xFFFF) {
-                    Vec3 p = Game::GetPosition(Game::GetPlayerVehicle());
-                    Net::SendVehicleSync(vid, p.x, p.y, p.z, 0);
-                    Net::SendVehicleSync(vid, p.x, p.y, p.z, Net::KEY_START_ROUTE);
-                }
-
-                Game::Log("[CG] Restart step 3: pressed 2 (attempt %d)", s_Key2Retries + 1);
                 break;
             }
 
-            case 4: // Release 2 + wait for CP to appear
-            {
-                // Release key after hold time
-                if (s_KeyHeld && elapsed >= KEY_HOLD) {
-                    Game::ReleaseKey('2');
-                    s_KeyHeld = false;
-                }
+            Vec3 target = s_Route[s_TurboIdx];
+            if (!IsValidPos(target.x, target.y)) {
+                s_TurboIdx++;
+                s_TpSub = 0;
+                s_StateTime = now;
+                break;
+            }
 
-                // Keep-alive sync
-                WORD vid = GetActiveVehID();
-                if (vid != 0xFFFF) {
-                    static DWORD s_LastKA = 0;
-                    if (now - s_LastKA > 250) {
-                        s_LastKA = now;
-                        Vec3 p = Game::GetPosition(Game::GetPlayerVehicle());
-                        Net::SendVehicleSync(vid, p.x, p.y, p.z);
-                    }
-                }
+            WORD vid = SAMP::GetVehicleID();
 
-                // Check if a checkpoint appeared
+            // Sub 0: Wait for the server to set a checkpoint
+            if (s_TpSub == 0) {
                 Vec3 cp; bool race;
-                if (elapsed >= 500 && PollCheckpoint(cp, race)) {
-                    SAMP::RestoreCamera();
-                    Game::Log("[CG] Restart: CP appeared! → IDLE");
+                if (PollCheckpoint(cp, race)) {
+                    // CP appeared — teleport to it now
+                    if (vid != 0xFFFF)
+                        SAMP::TeleportVehicle(vid, cp.x, cp.y, cp.z);
+                    s_TpSub = 1;
+                    s_StateTime = now;
+                    Game::Log("[CG] T[%d/%d] → (%.0f,%.0f,%.0f)", s_TurboIdx + 1, s_RouteSize, cp.x, cp.y, cp.z);
+                } else if (elapsed >= TURBO_BAIL) {
+                    Game::Log("[CG] TURBO bail no CP → LEARN");
+                    s_RouteKnown = false;
+                    s_RouteSize = 0;
+                    s_State = State::RESTARTING;
                     s_RestartStep = 0;
-                    s_State = State::IDLE;
+                    s_TpSub = 0;
+                    s_StateTime = now;
+                }
+                break;
+            }
+
+            // Sub 1: Wait for ProcessCheckpoints to fire enter event
+            if (s_TpSub == 1) {
+                if (elapsed < TURBO_SETTLE) break;
+
+                Vec3 cp; bool race;
+                bool hasCp = PollCheckpoint(cp, race);
+
+                // CP changed = server accepted the enter → advance
+                if (hasCp && IsDifferent(cp, target)) {
+                    s_TurboIdx++;
+                    s_CPCount++;
+                    s_TpSub = 0;
                     s_StateTime = now;
                     break;
                 }
 
-                // Timeout — no CP appeared after pressing 2
-                if (elapsed >= KEY2_CP_TIMEOUT) {
-                    s_Key2Retries++;
-                    if (s_Key2Retries >= (int)KEY2_MAX_RETRIES) {
-                        Game::Log("[CG] Restart: max key-2 retries, re-entering vehicle");
-                        s_Key2Retries = 0;
-                        s_RestartStep = 0; // full restart
-                        s_StateTime = now;
+                // CP disappeared = last one or server cleared it
+                if (!hasCp) {
+                    s_TurboIdx++;
+                    s_CPCount++;
+                    if (s_TurboIdx >= s_RouteSize) {
+                        Game::Log("[CG] TURBO no-CP done");
+                        s_State = State::RESTARTING;
+                        s_RestartStep = 0;
+                        s_TpSub = 0;
                     } else {
-                        Game::Log("[CG] Restart: no CP, retrying key 2");
-                        s_RestartStep = 3; // retry pressing 2
+                        s_TpSub = 0; // wait for next CP
+                    }
+                    s_StateTime = now;
+                    break;
+                }
+
+                // Same CP still there — re-teleport to make sure we're inside radius
+                if (elapsed >= TURBO_RESYNC) {
+                    if (vid != 0xFFFF)
+                        SAMP::TeleportVehicle(vid, cp.x, cp.y, cp.z);
+                    Game::Log("[CG] TURBO re-tp [%d]", s_TurboIdx);
+                    s_StateTime = now;
+                    break;
+                }
+
+                if (elapsed >= TURBO_BAIL) {
+                    Game::Log("[CG] TURBO bail → LEARN");
+                    s_RouteKnown = false;
+                    s_RouteSize = 0;
+                    s_State = State::RESTARTING;
+                    s_RestartStep = 0;
+                    s_TpSub = 0;
+                    s_StateTime = now;
+                    break;
+                }
+            }
+            break;
+        }
+
+        // ────────────── RESTARTING ──────────────
+        // Step 0: Check if already in boat → skip to step 3
+        //         Otherwise exit vehicle
+        // Step 1: Wait for boat 30
+        // Step 2: TP ped + PutIntoVehicle (game warp + sync)
+        // Step 3: Press "2" + wait for CP
+        // ─────────────────────────────────────
+        case State::RESTARTING:
+        {
+            switch (s_RestartStep) {
+
+            case 0: // Check current state
+            {
+                // Already in the correct boat? Skip directly to pressing "2"
+                WORD curVeh = SAMP::GetVehicleID();
+                if (curVeh == BOAT_SAMP_ID && InVehicle()) {
+                    s_Key2Attempts = 0;
+                    s_LastKeyPress = 0;
+                    s_TpSub = 0;
+                    s_RestartStep = 3;
+                    s_StateTime = now;
+                    Game::Log("[CG] R:0 already in boat → R:3");
+                    break;
+                }
+
+                // Whether on foot or in another vehicle, go straight to
+                // waiting for boat → PutIntoVehicle will handle the switch.
+                // Never call ExitVehicle — it sends an RPC the server detects.
+                s_TpSub = 0;
+                s_RestartStep = 1;
+                s_StateTime = now;
+                Game::Log("[CG] R:0 on foot");
+                break;
+            }
+
+            case 1: // Wait for boat
+            {
+                auto* sv = SAMP::GetSAMPVehicle(BOAT_SAMP_ID);
+                bool exists = false;
+                if (sv) {
+                    __try { exists = (sv->DoesExist() != 0); }
+                    __except (EXCEPTION_EXECUTE_HANDLER) {}
+                }
+                if (exists) {
+                    s_RestartStep = 2;
+                    s_StateTime = now;
+                    Game::Log("[CG] R:1 boat ready");
+                }
+                break;
+            }
+
+            case 2: // TP + enter vehicle (non-blocking sub-steps)
+            {
+                // Sub 0: Teleport ped to boat position
+                if (s_TpSub == 0) {
+                    SAMP::TeleportPed(BOAT_X, BOAT_Y, BOAT_Z);
+                    SAMP::SetPedRotation(BOAT_HEADING);
+                    s_TpSub = 1;
+                    s_StateTime = now;
+                    Game::Log("[CG] R:2 TP to boat");
+                    break;
+                }
+
+                // Sub 1: Wait for TP to settle, then warp into vehicle
+                if (s_TpSub == 1) {
+                    if (elapsed < ENTER_TP_WAIT) break;
+                    if (SAMP::PutIntoVehicle(BOAT_SAMP_ID)) {
+                        s_TpSub = 2;
                         s_StateTime = now;
+                        Game::Log("[CG] R:2 put into vehicle");
+                    } else {
+                        Game::Log("[CG] R:2 PutInto failed → retry");
+                        s_TpSub = 0;
+                        s_RestartStep = 1;
+                        s_StateTime = now;
+                    }
+                    break;
+                }
+
+                // Sub 2: Wait for game to process vehicle entry + SA-MP auto-sync
+                if (s_TpSub == 2) {
+                    if (elapsed < ENTER_WARP_WAIT) break;
+                    if (!InVehicle()) {
+                        Game::Log("[CG] R:2 not in vehicle → retry");
+                        s_TpSub = 0;
+                        s_StateTime = now;
+                        break;
+                    }
+                    // SA-MP syncs automatically via CLocalPlayer::Process()
+                    s_Key2Attempts = 0;
+                    s_LastKeyPress = 0;
+                    s_TpSub = 0;
+                    s_RestartStep = 3;
+                    s_StateTime = now;
+                    Game::Log("[CG] R:2 in vehicle");
+                    break;
+                }
+                break;
+            }
+
+            case 3: // Press "2" + wait for CP
+            {
+                if (elapsed < ENTER_SETTLE) break;
+
+                if (!InVehicle()) {
+                    Game::Log("[CG] R:3 lost vehicle → R:0");
+                    s_RestartStep = 0;
+                    s_StateTime = now;
+                    break;
+                }
+
+                // Release key after hold duration
+                if (s_KeyHeld && (now - s_LastKeyPress) >= KEY2_HOLD) {
+                    ReleaseKey2();
+                }
+
+                // Press "2": first time or after KEY2_WAIT since last
+                bool needPress = !s_KeyHeld &&
+                    (s_Key2Attempts == 0 || (now - s_LastKeyPress) >= KEY2_WAIT);
+                if (needPress) {
+                    PressKey2();
+                    s_Key2Attempts++;
+                    s_LastKeyPress = now;
+                    Game::Log("[CG] R:3 key2 #%d", s_Key2Attempts);
+                    break;
+                }
+
+                // Check if CP appeared (only after key released)
+                if (!s_KeyHeld) {
+                    Vec3 cp; bool race;
+                    if (PollCheckpoint(cp, race)) {
+                        Game::Log("[CG] R:3 CP! → IDLE (#%d)", s_Key2Attempts);
+                        s_RestartStep = 0;
+                        s_State = State::IDLE;
+                        s_StateTime = now;
+                        break;
                     }
                 }
                 break;

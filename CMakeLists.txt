@@ -29,6 +29,8 @@ set(SAMPAPI_SOURCES
     ${SAMPAPI_DL}/CPed.cpp
     ${SAMPAPI_DL}/CVehicle.cpp
     ${SAMPAPI_DL}/CVehiclePool.cpp
+    ${SAMPAPI_DL}/CLocalPlayer.cpp
+    ${SAMPAPI_DL}/CPlayerPool.cpp
 )
 
 # ── Our source files ──
@@ -40,7 +42,6 @@ set(SOURCES
 set(HEADERS
     src/samp.h
     src/game.h
-    src/net.h
     src/coastguard.h
 )
 

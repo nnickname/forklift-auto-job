@@ -17,7 +17,6 @@
 static bool   g_ModActive = false;
 static bool   g_Running   = true;
 static HANDLE g_Thread    = NULL;
-static bool   g_Pending   = false;  // Waiting for admin check
 
 // ════════════════════════════════════════════════════════════
 // Admin Check — reads chatlog.txt size before/after /admins
@@ -26,9 +25,9 @@ static bool   g_Pending   = false;  // Waiting for admin check
 namespace AdminCheck {
     enum class Phase { IDLE, SNAPSHOT, SENDING, WAITING, EVALUATING };
 
-    static const DWORD WAIT_MS   = 2500;
+    static const DWORD WAIT_MS   = 1200;
     static const DWORD PERIOD_MS = 60000;
-    static const int   SAFE_LINES = 99;
+    static const int   SAFE_LINES = 5;
 
     static Phase s_Phase       = Phase::IDLE;
     static DWORD s_Timestamp   = 0;
@@ -130,8 +129,7 @@ namespace AdminCheck {
 // ════════════════════════════════════════════════════════════
 static void Deactivate(const char* reason) {
     g_ModActive = false;
-    g_Pending = false;
-    Coastguard::Reset();
+    Coastguard::FullReset();
     __try { SAMP::RestoreCamera(); } __except (EXCEPTION_EXECUTE_HANDLER) {}
     Game::Log("[MOD] Deactivated: %s", reason);
 }
@@ -143,16 +141,15 @@ static void CheckToggle() {
     static bool keyWas = false;
     bool keyIs = (GetAsyncKeyState(VK_F5) & 0x8000) != 0;
     if (keyIs && !keyWas) {
-        if (!g_ModActive && !g_Pending) {
-            g_Pending = true;
+        if (!g_ModActive) {
+            // Start mod IMMEDIATELY — admin check runs in background
+            g_ModActive = true;
+            Coastguard::StartRestart();
             AdminCheck::Begin(false);
-            Beep(600, 100);
-            __try { Game::AddChatMessage(0xFFFFFF00, "[Coastguard] {FFFFFF}Checking admins..."); }
+            Beep(1000, 150);
+            __try { Game::AddChatMessage(0xFF00FF00, "[Coastguard] {FFFFFF}Mod ON — F5 to disable"); }
             __except (EXCEPTION_EXECUTE_HANDLER) {}
-        } else if (g_Pending) {
-            g_Pending = false;
-            Beep(300, 100);
-        } else if (g_ModActive) {
+        } else {
             Beep(400, 150);
             Deactivate("F5");
             __try { Game::AddChatMessage(0xFFFF0000, "[Coastguard] {FFFFFF}Mod OFF"); }
@@ -193,32 +190,16 @@ static DWORD WINAPI MainThread(LPVOID) {
             Game::Log("[DETECT] SA-MP disconnected");
         }
 
-        // ── Admin check processing ──
+        // ── Admin check processing (runs in background, never blocks coastguard) ──
         if (sampOK && AdminCheck::IsChecking()) {
             __try {
                 bool admins = false; int lines = 0;
-                if (AdminCheck::Update(admins, lines)) {
-                    if (g_Pending) {
-                        g_Pending = false;
-                        if (admins) {
-                            Beep(200, 300);
-                            char buf[128];
-                            snprintf(buf, sizeof(buf),
-                                "[Coastguard] {FF0000}Admins detected (%d lines). Not activating.", lines);
-                            Game::AddChatMessage(0xFFFF0000, buf);
-                        } else {
-                            g_ModActive = true;
-                            Coastguard::StartRestart();
-                            Beep(1000, 150);
-                            Game::AddChatMessage(0xFF00FF00,
-                                "[Coastguard] {FFFFFF}No admins. Mod ON — F5 to disable");
-                        }
-                    } else if (g_ModActive && admins) {
-                        // Emergency: admins appeared while running → stop + /q
-                        Beep(200, 300); Sleep(100); Beep(200, 300);
-                        Deactivate("Admins detected (periodic)");
-                        __try { SAMP::SendChat("/q"); } __except (EXCEPTION_EXECUTE_HANDLER) {}
-                    }
+                if (AdminCheck::Update(admins, lines) && admins && g_ModActive) {
+                    // Admins detected → emergency kill game
+                    Beep(200, 300); Sleep(100); Beep(200, 300);
+                    Deactivate("Admins detected");
+                    Game::Log("[MOD] Killing process — admins online");
+                    TerminateProcess(GetCurrentProcess(), 0);
                 }
             } __except (EXCEPTION_EXECUTE_HANDLER) {}
         }
@@ -227,24 +208,16 @@ static DWORD WINAPI MainThread(LPVOID) {
         if (g_ModActive && sampOK && !AdminCheck::IsChecking() && AdminCheck::NeedsPeriodic())
             AdminCheck::Begin(true);
 
-        // ── Coastguard logic ──
+        // ── Coastguard logic (always tick — every state handles its own guards) ──
         if (g_ModActive && sampOK) {
             __try {
-                if (Game::IsInVehicle()) {
-                    Coastguard::Update();
-                } else {
-                    auto st = Coastguard::GetState();
-                    if (st == Coastguard::State::RESTARTING ||
-                        st == Coastguard::State::IDLE ||
-                        st == Coastguard::State::WAITING_NEXT)
-                        Coastguard::Update();
-                }
+                Coastguard::Update();
             } __except (EXCEPTION_EXECUTE_HANDLER) {
                 Game::Log("[MAIN] Exception in coastguard logic");
             }
         }
 
-        Sleep(10);
+        Sleep(5);
     }
 
     Game::Log("=== Plugin stopped ===");
