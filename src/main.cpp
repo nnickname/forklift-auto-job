@@ -138,6 +138,16 @@ static void Deactivate(const char* reason) {
 // F5 Toggle
 // ════════════════════════════════════════════════════════════
 static void CheckToggle() {
+    // F6 = instant kill game (for testing)
+    static bool f6Was = false;
+    bool f6Is = (GetAsyncKeyState(VK_F6) & 0x8000) != 0;
+    if (f6Is && !f6Was) {
+        Game::Log("[MOD] F6 pressed — killing process");
+        Beep(200, 100);
+        TerminateProcess(GetCurrentProcess(), 0);
+    }
+    f6Was = f6Is;
+
     static bool keyWas = false;
     bool keyIs = (GetAsyncKeyState(VK_F5) & 0x8000) != 0;
     if (keyIs && !keyWas) {

@@ -274,14 +274,11 @@ public FinishCoastguardJob(playerid)
     SendClientMessage(playerid, 0x00FF00FF, msg);
     GameTextForPlayer(playerid, "~g~+$3,500!", 5000, 3);
 
-    // Sacar del vehículo
+    // Sacar del vehículo (como el servidor real)
     new vid = GetPlayerVehicleID(playerid);
     if(vid != 0)
     {
-        // Remover del vehículo y spawnear al lado del bote
         RemovePlayerFromVehicle(playerid);
-
-        // Establecer posición después de un pequeño delay
         SetTimerEx("RespawnAfterJob", 1000, false, "i", playerid);
     }
 
@@ -307,7 +304,6 @@ public RespawnAfterJob(playerid)
     }
     else
     {
-        // Resetear posición del bote
         SetVehiclePos(gBoatID, BOAT_X, BOAT_Y, BOAT_Z);
         SetVehicleZAngle(gBoatID, BOAT_ANGLE);
     }

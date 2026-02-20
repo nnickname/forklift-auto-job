@@ -136,9 +136,25 @@ namespace Coastguard {
         return false;
     }
 
-    // True in-vehicle check: both GTA-side and SAMP-side
+    // True in-vehicle check: game-side is authoritative.
+    // SAMP's m_nCurrentVehicle can become stale after server-side
+    // RemovePlayerFromVehicle — we proactively fix that here.
     static bool InVehicle() {
-        return Game::IsInVehicle() || SAMP::GetVehicleID() != 0xFFFF;
+        bool gameInVeh = Game::IsInVehicle();
+        bool sampInVeh = SAMP::GetVehicleID() != 0xFFFF;
+
+        if (!gameInVeh && sampInVeh) {
+            // Server ejected us but SAMP state is stale → fix it
+            auto* lp = SAMP::GetLocalPlayer();
+            if (lp) {
+                __try { lp->m_nCurrentVehicle = 0xFFFF; }
+                __except (EXCEPTION_EXECUTE_HANDLER) {}
+            }
+            Game::Log("[CG] InVehicle: cleared stale m_nCurrentVehicle");
+            return false;
+        }
+
+        return gameInVeh;
     }
 
     // SA-MP's CLocalPlayer::Process() handles sync automatically.
@@ -154,12 +170,8 @@ namespace Coastguard {
 
     inline void Reset() {
         if (s_KeyHeld) {
-            // Release the "2" key via Windows input
-            INPUT inp = {};
-            inp.type = INPUT_KEYBOARD;
-            inp.ki.wVk = '2';
-            inp.ki.dwFlags = KEYEVENTF_KEYUP;
-            SendInput(1, &inp, sizeof(INPUT));
+            // Clear KEY_SUBMISSION via direct sync injection
+            SAMP::ClearKey2Sync();
             s_KeyHeld = false;
         }
         SAMP::ClearPedKeys();
@@ -191,22 +203,35 @@ namespace Coastguard {
     // ════════════════════════════════════════════════════════
 
     static void PressKey2() {
-        INPUT inp = {};
-        inp.type = INPUT_KEYBOARD;
-        inp.ki.wVk = '2';
-        inp.ki.wScan = (BYTE)MapVirtualKey('2', MAPVK_VK_TO_VSC);
-        inp.ki.dwFlags = 0;
-        SendInput(1, &inp, sizeof(INPUT));
+        // Direct sync injection — bypasses Windows message queue.
+        // Writes KEY_SUBMISSION into CPad + m_incarData and sends
+        // via RakNet. Works even if main thread/GPU is frozen.
+        if (SAMP::SendKey2Sync()) {
+            Game::Log("[KEY2] SendKey2Sync OK");
+        } else {
+            Game::Log("[KEY2] SendKey2Sync FAILED — fallback SendInput");
+            INPUT inp = {};
+            inp.type = INPUT_KEYBOARD;
+            inp.ki.wVk = '2';
+            inp.ki.wScan = (BYTE)MapVirtualKey('2', MAPVK_VK_TO_VSC);
+            inp.ki.dwFlags = 0;
+            SendInput(1, &inp, sizeof(INPUT));
+        }
         s_KeyHeld = true;
     }
 
     static void ReleaseKey2() {
-        INPUT inp = {};
-        inp.type = INPUT_KEYBOARD;
-        inp.ki.wVk = '2';
-        inp.ki.wScan = (BYTE)MapVirtualKey('2', MAPVK_VK_TO_VSC);
-        inp.ki.dwFlags = KEYEVENTF_KEYUP;
-        SendInput(1, &inp, sizeof(INPUT));
+        if (SAMP::ClearKey2Sync()) {
+            Game::Log("[KEY2] ClearKey2Sync OK");
+        } else {
+            Game::Log("[KEY2] ClearKey2Sync FAILED — fallback SendInput");
+            INPUT inp = {};
+            inp.type = INPUT_KEYBOARD;
+            inp.ki.wVk = '2';
+            inp.ki.wScan = (BYTE)MapVirtualKey('2', MAPVK_VK_TO_VSC);
+            inp.ki.dwFlags = KEYEVENTF_KEYUP;
+            SendInput(1, &inp, sizeof(INPUT));
+        }
         s_KeyHeld = false;
     }
 
@@ -271,6 +296,7 @@ namespace Coastguard {
         {
             if (!InVehicle()) {
                 Game::Log("[CG] No vehicle → RESTARTING");
+                SAMP::SendOnfootSync(); // confirm to server we're on foot
                 s_State = State::RESTARTING;
                 s_RestartStep = 0;
                 s_TpSub = 0;
@@ -320,6 +346,7 @@ namespace Coastguard {
             // Ejected = route done
             if (!InVehicle()) {
                 s_RouteKnown = true;
+                SAMP::SendOnfootSync(); // confirm to server we're on foot
                 Game::Log("[CG] Ejected → RESTART (%d CPs)", s_RouteSize);
                 s_State = State::RESTARTING;
                 s_RestartStep = 0;
@@ -350,9 +377,14 @@ namespace Coastguard {
                 } else {
                     s_SamePosRetry++;
                     if (s_SamePosRetry >= (int)SAME_CP_RETRIES) {
+                        // Stuck on same CP too long → assume route done, restart
                         s_SamePosRetry = 0;
-                        s_LastCP = {0, 0, 0};
-                        Game::Log("[CG] Force-accept");
+                        s_RouteKnown = (s_RouteSize > 0);
+                        Game::Log("[CG] Force-accept → RESTART (%d CPs)", s_RouteSize);
+                        s_State = State::RESTARTING;
+                        s_RestartStep = 0;
+                        s_StateTime = now;
+                        break;
                     } else {
                         // Re-teleport to same CP
                         WORD vid = SAMP::GetVehicleID();
@@ -381,6 +413,7 @@ namespace Coastguard {
         {
             if (!InVehicle()) {
                 Game::Log("[CG] Lost vehicle TURBO → RESTART");
+                SAMP::SendOnfootSync(); // confirm to server we're on foot
                 s_State = State::RESTARTING;
                 s_RestartStep = 0;
                 s_TpSub = 0;

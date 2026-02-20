@@ -364,4 +364,69 @@ namespace SAMP {
         __try { ped->ForceRotation(rad); }
         __except (EXCEPTION_EXECUTE_HANDLER) {}
     }
+
+    // ════════════════════════════════════════════════════════
+    // KEY_SUBMISSION ("2") via direct sync injection.
+    // Bypasses Windows message queue entirely.
+    // Works even when main thread / GPU is frozen.
+    //
+    // Strategy: write ShockButtonR into BOTH GTA CPad memory
+    // AND SA-MP's m_incarData, then call SendIncarData() which
+    // goes straight through RakNet (its own network thread).
+    // ════════════════════════════════════════════════════════
+
+    namespace GTAPad {
+        // GTA SA 1.0 US: CPad::Pads[0] at 0xB73458
+        // NewState (CControllerState) at offset 0x00
+        // ShockButtonR at offset 0x26 within CControllerState
+        static constexpr DWORD CPAD0_BASE = 0xB73458;
+        static constexpr DWORD NEWSTATE_SHOCKBUTTONR = 0x26;
+
+        inline void SetShockButtonR(bool pressed) {
+            __try {
+                *(short*)(CPAD0_BASE + NEWSTATE_SHOCKBUTTONR) = pressed ? 255 : 0;
+            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+    }
+
+    // Send a sync packet WITH KEY_SUBMISSION (bit 9 = 0x200) set.
+    // The server sees the transition 0→1 and fires OnPlayerKeyStateChange.
+    inline bool SendKey2Sync() {
+        auto* lp = GetLocalPlayer();
+        if (!lp) return false;
+
+        // 1. Write to GTA CPad (so SendIncarData reads it)
+        GTAPad::SetShockButtonR(true);
+
+        // 2. Also set directly in SA-MP's incar data struct (belt & suspenders)
+        __try {
+            lp->m_incarData.m_controllerState.m_bShockButtonR = 1;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+        // 3. Force send sync packet via RakNet
+        __try { lp->SendIncarData(); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+
+        return true;
+    }
+
+    // Send a sync packet WITHOUT KEY_SUBMISSION ("release").
+    inline bool ClearKey2Sync() {
+        auto* lp = GetLocalPlayer();
+        if (!lp) return false;
+
+        // Clear GTA CPad
+        GTAPad::SetShockButtonR(false);
+
+        // Clear SA-MP data
+        __try {
+            lp->m_incarData.m_controllerState.m_bShockButtonR = 0;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+
+        // Send "released" state
+        __try { lp->SendIncarData(); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+
+        return true;
+    }
 }

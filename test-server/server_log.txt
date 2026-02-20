@@ -3466,3 +3466,97 @@ v0.3.DL-R1, (C)2005-2018 SA-MP Team
 [12:09:58] Number of vehicle models: 1
 [12:10:21] [connection] incoming connection: 127.0.0.1:63923 id: 0
 [12:10:21] [join] Holas has joined the server (0:127.0.0.1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[12:28:17] filterscripts = ""  (string)
+[12:28:17] 
+[12:28:17] Server Plugins
+[12:28:17] --------------
+[12:28:17]  Loaded 0 plugins.
+
+[12:28:17] 
+[12:28:17] Filterscripts
+[12:28:17] ---------------
+[12:28:17]   Loaded 0 filterscripts.
+
+[12:28:17] [COASTGUARD] Bote creado ID=1 modelo=472
+[12:28:17] ════════════════════════════════════════
+[12:28:17]  Coastguard Test Server - Listo!
+[12:28:17]  Bote en: 719.12, -1698.42, 1.78
+[12:28:17]  52 checkpoints EXACTOS del servidor real
+[12:28:17]  Apretar 2 en el bote para empezar
+[12:28:17] ════════════════════════════════════════
+[12:28:17] Script[gamemodes/coastguard_test.amx]: Run time error 20: "Invalid index parameter (bad entry point)"
+[12:28:17] Number of vehicle models: 1
+[12:28:57] [connection] incoming connection: 127.0.0.1:61924 id: 0
+[12:28:57] [join] Holas has joined the server (0:127.0.0.1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[12:37:13] filterscripts = ""  (string)
+[12:37:13] 
+[12:37:13] Server Plugins
+[12:37:13] --------------
+[12:37:13]  Loaded 0 plugins.
+
+[12:37:13] 
+[12:37:13] Filterscripts
+[12:37:13] ---------------
+[12:37:13]   Loaded 0 filterscripts.
+
+[12:37:13] [COASTGUARD] Bote creado ID=1 modelo=472
+[12:37:13] ════════════════════════════════════════
+[12:37:13]  Coastguard Test Server - Listo!
+[12:37:13]  Bote en: 719.12, -1698.42, 1.78
+[12:37:13]  52 checkpoints EXACTOS del servidor real
+[12:37:13]  Apretar 2 en el bote para empezar
+[12:37:13] ════════════════════════════════════════
+[12:37:13] Script[gamemodes/coastguard_test.amx]: Run time error 20: "Invalid index parameter (bad entry point)"
+[12:37:13] Number of vehicle models: 1
+[12:37:44] [connection] incoming connection: 127.0.0.1:54352 id: 0
+[12:37:44] [join] Holas has joined the server (0:127.0.0.1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[12:46:46] filterscripts = ""  (string)
+[12:46:46] 
+[12:46:46] Server Plugins
+[12:46:46] --------------
+[12:46:46]  Loaded 0 plugins.
+
+[12:46:46] 
+[12:46:46] Filterscripts
+[12:46:46] ---------------
+[12:46:46]   Loaded 0 filterscripts.
+
+[12:46:46] [COASTGUARD] Bote creado ID=1 modelo=472
+[12:46:46] ════════════════════════════════════════
+[12:46:46]  Coastguard Test Server - Listo!
+[12:46:46]  Bote en: 719.12, -1698.42, 1.78
+[12:46:46]  52 checkpoints EXACTOS del servidor real
+[12:46:46]  Apretar 2 en el bote para empezar
+[12:46:46] ════════════════════════════════════════
+[12:46:46] Script[gamemodes/coastguard_test.amx]: Run time error 20: "Invalid index parameter (bad entry point)"
+[12:46:46] Number of vehicle models: 1
+[12:47:18] [connection] incoming connection: 127.0.0.1:49494 id: 0
+[12:47:18] [join] Holas has joined the server (0:127.0.0.1)
+[12:48:52] [part] Holas has left the server (0:0)
