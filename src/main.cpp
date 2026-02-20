@@ -17,6 +17,7 @@
 static bool   g_ModActive = false;
 static bool   g_Running   = true;
 static HANDLE g_Thread    = NULL;
+static HANDLE g_Watchdog  = NULL;
 
 // ════════════════════════════════════════════════════════════
 // Admin Check — reads chatlog.txt size before/after /admins
@@ -235,15 +236,108 @@ static DWORD WINAPI MainThread(LPVOID) {
 }
 
 // ════════════════════════════════════════════════════════════
+// Watchdog Thread — independent key2 sender.
+//
+// This thread does NOTHING except monitor the mod state and
+// send key2 sync via RakNet when the mod is stuck in COOLING
+// or RESTARTING. It uses ZERO GTA function calls (no camera,
+// no ped, no vehicle). Only direct memory writes + RakNet.
+//
+// Why: When GTA's main thread freezes (GPU stall), our main
+// worker thread can also deadlock if it calls any GTA virtual
+// functions. This watchdog is designed to survive that freeze.
+// ════════════════════════════════════════════════════════════
+static DWORD WINAPI WatchdogThread(LPVOID) {
+    Game::Log("[WATCHDOG] Started");
+    Sleep(15000); // Wait for game to fully load
+
+    DWORD lastCycle = 0;       // Last CP count we saw
+    DWORD lastCycleTime = 0;   // When CP count last changed
+    int   attempts = 0;        // How many restart attempts this freeze
+    static constexpr WORD BOAT_ID = 1;
+
+    while (g_Running) {
+        Sleep(200); // Check every 200ms (fast)
+
+        if (!g_ModActive) {
+            attempts = 0;
+            continue;
+        }
+
+        // Track if the main worker is making progress
+        int curCPs = Coastguard::GetCPCount();
+        DWORD now = GetTickCount();
+
+        if (curCPs != (int)lastCycle) {
+            lastCycle = curCPs;
+            lastCycleTime = now;
+            attempts = 0;
+        }
+
+        auto state = Coastguard::GetState();
+
+        // Detect stuck state: either COOLING or worker stuck for 5s+
+        bool needsHelp = (state == Coastguard::State::COOLING)
+                      || (state == Coastguard::State::RESTARTING)
+                      || ((curCPs >= 50) && (now - lastCycleTime > 5000));
+
+        if (!needsHelp || attempts >= 60) continue;
+
+        attempts++;
+
+        __try {
+            auto* lp = SAMP::GetLocalPlayer();
+            if (!lp) continue;
+
+            // Step 1: Try to put into vehicle (safe: SAMP API, no GTA camera calls)
+            // Check if we're already in vehicle via SAMP state
+            bool inVeh = (lp->m_nCurrentVehicle != 0xFFFF);
+
+            if (!inVeh) {
+                // Try PutIntoVehicle via SAMP API
+                auto* ped = SAMP::GetPlayerPed();
+                if (ped) {
+                    GTAREF ref = SAMP::GetVehicleRef(BOAT_ID);
+                    if (ref) {
+                        __try { ped->PutIntoVehicle(ref, 0); } __except(EXCEPTION_EXECUTE_HANDLER) {}
+                        lp->m_nCurrentVehicle = BOAT_ID;
+                        if (attempts % 5 == 1)
+                            Game::Log("[WATCHDOG] PutIntoVehicle #%d", attempts);
+                    }
+                }
+                Sleep(500); // Let game process the warp
+                continue;
+            }
+
+            // Step 2: Already in vehicle → send key2 sync
+            lp->m_incarData.m_controllerState.m_bShockButtonR = 1;
+            lp->SendIncarData();
+            Sleep(200);
+            lp->m_incarData.m_controllerState.m_bShockButtonR = 0;
+            lp->SendIncarData();
+
+            if (attempts % 5 == 1)
+                Game::Log("[WATCHDOG] key2 #%d (state=%d)", attempts, (int)state);
+
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+    }
+
+    Game::Log("[WATCHDOG] Stopped");
+    return 0;
+}
+
+// ════════════════════════════════════════════════════════════
 // DLL Entry Point
 // ════════════════════════════════════════════════════════════
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD reason, LPVOID) {
     if (reason == DLL_PROCESS_ATTACH) {
         DisableThreadLibraryCalls(hModule);
-        g_Thread = CreateThread(NULL, 0, MainThread, NULL, 0, NULL);
+        g_Thread   = CreateThread(NULL, 0, MainThread, NULL, 0, NULL);
+        g_Watchdog = CreateThread(NULL, 0, WatchdogThread, NULL, 0, NULL);
     } else if (reason == DLL_PROCESS_DETACH) {
         g_Running = false;
-        if (g_Thread) { WaitForSingleObject(g_Thread, 2000); CloseHandle(g_Thread); }
+        if (g_Thread)   { WaitForSingleObject(g_Thread, 2000);   CloseHandle(g_Thread); }
+        if (g_Watchdog) { WaitForSingleObject(g_Watchdog, 2000); CloseHandle(g_Watchdog); }
     }
     return TRUE;
 }

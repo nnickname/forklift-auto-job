@@ -27,6 +27,7 @@ namespace Coastguard {
         TELEPORTING,
         WAITING_NEXT,
         TURBO,
+        COOLING,     // Do NOTHING — let GTA main thread recover
         RESTARTING
     };
 
@@ -53,6 +54,7 @@ namespace Coastguard {
     static constexpr DWORD TURBO_SETTLE    = 200;    // Wait per CP in turbo
     static constexpr DWORD TURBO_RESYNC    = 2000;   // Re-sync if stuck in turbo
     static constexpr DWORD TURBO_BAIL      = 15000;  // Bail turbo mode
+    static constexpr DWORD COOL_DOWN_MS    = 3000;   // Do NOTHING after cycle end
 
     // Key "2" as ControllerState bits
     // "2" in SA-MP dialogs maps to submission key — use ShockButtonR (look behind)
@@ -96,6 +98,7 @@ namespace Coastguard {
 
     // Retry counter
     static int   s_SamePosRetry = 0;
+    static int   s_TurboRetries = 0; // re-TP counter within TURBO for one CP
 
     // Sync timer
     static DWORD s_LastSync = 0;
@@ -197,6 +200,46 @@ namespace Coastguard {
         s_StateTime = GetTickCount();
     }
 
+    // Full cycle-end reset.
+    // IMPORTANT: No calls to RestoreCamera / SendOnfootSync / any SAMP-API
+    // virtual functions here. Those call into GTA code which is NOT thread-safe
+    // and WILL deadlock our worker thread if GTA's main thread is frozen.
+    // Instead, we just do safe memory writes and enter COOLING.
+    // The main thread will naturally recover once we stop writing positions.
+    inline void CycleReset(const char* reason) {
+        Game::Log("[CG] CycleReset: %s", reason);
+
+        // 1. Clear key state (safe: direct memory writes + RakNet send)
+        if (s_KeyHeld) {
+            // Only clear CPad memory (no virtual function calls)
+            SAMP::GTAPad::SetShockButtonR(false);
+            s_KeyHeld = false;
+        }
+
+        // 2. Clear SAMP vehicle ID if stale (safe: direct memory write)
+        auto* lp = SAMP::GetLocalPlayer();
+        if (lp) {
+            __try { lp->m_nCurrentVehicle = 0xFFFF; }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+
+        // 3. Reset mod state (pure local variables, no GTA calls)
+        s_CPCount = 0;
+        s_RestartStep = 0;
+        s_SamePosRetry = 0;
+        s_Key2Attempts = 0;
+        s_LastKeyPress = 0;
+        s_PreKey2Snap = false;
+        s_TpSub = 0;
+
+        // 4. Enter COOLING state — do absolutely nothing for COOL_DOWN_MS.
+        // This is the KEY part: we STOP calling any GTA/SAMP functions,
+        // giving the main thread time to recover from whatever freeze.
+        // This replicates the gap when pressing F5 off then on.
+        s_State = State::COOLING;
+        s_StateTime = GetTickCount();
+    }
+
     // ════════════════════════════════════════════════════════
     // Press/Release "2" via Windows SendInput
     // (CPed::SetKeys doesn't have a "2" key — it's keyboard only)
@@ -295,12 +338,7 @@ namespace Coastguard {
         case State::TELEPORTING:
         {
             if (!InVehicle()) {
-                Game::Log("[CG] No vehicle → RESTARTING");
-                SAMP::SendOnfootSync(); // confirm to server we're on foot
-                s_State = State::RESTARTING;
-                s_RestartStep = 0;
-                s_TpSub = 0;
-                s_StateTime = now;
+                CycleReset("No vehicle in TELEPORTING");
                 break;
             }
 
@@ -346,11 +384,7 @@ namespace Coastguard {
             // Ejected = route done
             if (!InVehicle()) {
                 s_RouteKnown = true;
-                SAMP::SendOnfootSync(); // confirm to server we're on foot
-                Game::Log("[CG] Ejected → RESTART (%d CPs)", s_RouteSize);
-                s_State = State::RESTARTING;
-                s_RestartStep = 0;
-                s_StateTime = now;
+                CycleReset("Ejected after route");
                 break;
             }
 
@@ -370,20 +404,15 @@ namespace Coastguard {
             if (elapsed >= NEXT_CP_WAIT) {
                 if (!SAMP::IsCheckpointActive() && !SAMP::IsRaceCheckpointActive()) {
                     s_RouteKnown = true;
-                    Game::Log("[CG] No CP → done (%d) → RESTART", s_RouteSize);
-                    s_State = State::RESTARTING;
-                    s_RestartStep = 0;
-                    s_StateTime = now;
+                    CycleReset("No CP after route");
+                    break;
                 } else {
                     s_SamePosRetry++;
                     if (s_SamePosRetry >= (int)SAME_CP_RETRIES) {
                         // Stuck on same CP too long → assume route done, restart
                         s_SamePosRetry = 0;
                         s_RouteKnown = (s_RouteSize > 0);
-                        Game::Log("[CG] Force-accept → RESTART (%d CPs)", s_RouteSize);
-                        s_State = State::RESTARTING;
-                        s_RestartStep = 0;
-                        s_StateTime = now;
+                        CycleReset("Force-accept stuck CP");
                         break;
                     } else {
                         // Re-teleport to same CP
@@ -412,12 +441,7 @@ namespace Coastguard {
         case State::TURBO:
         {
             if (!InVehicle()) {
-                Game::Log("[CG] Lost vehicle TURBO → RESTART");
-                SAMP::SendOnfootSync(); // confirm to server we're on foot
-                s_State = State::RESTARTING;
-                s_RestartStep = 0;
-                s_TpSub = 0;
-                s_StateTime = now;
+                CycleReset("Lost vehicle in TURBO");
                 break;
             }
 
@@ -474,6 +498,7 @@ namespace Coastguard {
                     s_TurboIdx++;
                     s_CPCount++;
                     s_TpSub = 0;
+                    s_TurboRetries = 0;
                     s_StateTime = now;
                     break;
                 }
@@ -494,26 +519,43 @@ namespace Coastguard {
                     break;
                 }
 
-                // Same CP still there — re-teleport to make sure we're inside radius
+                // Same CP still there — re-teleport, but with a hard bail limit
+                s_TurboRetries++;
+                if (s_TurboRetries >= 5) {
+                    // 5 re-TPs and server still hasn't accepted → bail
+                    Game::Log("[CG] TURBO bail retries [%d] → CycleReset", s_TurboIdx);
+                    s_TurboRetries = 0;
+                    s_RouteKnown = (s_RouteSize > 0);
+                    CycleReset("TURBO stuck on last CP");
+                    break;
+                }
                 if (elapsed >= TURBO_RESYNC) {
                     if (vid != 0xFFFF)
                         SAMP::TeleportVehicle(vid, cp.x, cp.y, cp.z);
-                    Game::Log("[CG] TURBO re-tp [%d]", s_TurboIdx);
-                    s_StateTime = now;
-                    break;
-                }
-
-                if (elapsed >= TURBO_BAIL) {
-                    Game::Log("[CG] TURBO bail → LEARN");
-                    s_RouteKnown = false;
-                    s_RouteSize = 0;
-                    s_State = State::RESTARTING;
-                    s_RestartStep = 0;
-                    s_TpSub = 0;
+                    Game::Log("[CG] TURBO re-tp [%d] try %d", s_TurboIdx, s_TurboRetries);
                     s_StateTime = now;
                     break;
                 }
             }
+            break;
+        }
+
+        // ────────────── COOLING ──────────────
+        // Do absolutely NOTHING. No memory writes, no teleports,
+        // no sync. Just wait. This gives GTA's main thread time
+        // to finish any pending DirectX calls and recover from
+        // camera freeze / GPU stall — same as the gap between
+        // pressing F5 off then F5 on.
+        // ─────────────────────────────────────
+        case State::COOLING:
+        {
+            if (elapsed >= COOL_DOWN_MS) {
+                Game::Log("[CG] Cooldown done → RESTARTING");
+                s_State = State::RESTARTING;
+                s_RestartStep = 0;
+                s_StateTime = now;
+            }
+            // else: do nothing, just wait
             break;
         }
 

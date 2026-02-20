@@ -41,15 +41,19 @@ namespace Game {
     // ── Player queries ──
 
     inline DWORD GetPlayerPed() {
-        DWORD* p = (DWORD*)GameAddr::PLAYER_PED_PTR;
-        if (!p || IsBadReadPtr(p, 4)) return 0;
-        return *p;
+        __try {
+            DWORD* p = (DWORD*)GameAddr::PLAYER_PED_PTR;
+            if (!p) return 0;
+            return *p;
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return 0; }
     }
 
     inline DWORD GetPlayerVehicle() {
         DWORD ped = GetPlayerPed();
-        if (!ped || IsBadReadPtr((void*)ped, 0x600)) return 0;
-        return *(DWORD*)(ped + GameAddr::VEHICLE_PTR);
+        if (!ped) return 0;
+        __try {
+            return *(DWORD*)(ped + GameAddr::VEHICLE_PTR);
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return 0; }
     }
 
     inline bool IsInVehicle() { return GetPlayerVehicle() != 0; }
