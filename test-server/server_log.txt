@@ -1,0 +1,3468 @@
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:25:39] Unable to exec file 'server.cfg'.
+[00:25:39] Error: Your password must be changed from the default password, please change it.
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:28:37] 
+[00:28:37] Server Plugins
+[00:28:37] --------------
+[00:28:37]  Loading plugin: tde.dll
+[00:28:38]   Failed.
+[00:28:38]  Loaded 0 plugins.
+
+[00:28:38] [artwork:crc] blank.dff CRC = 0xA08847A4
+[00:28:38] [artwork:crc] account.txd CRC = 0x8DA3ADE3
+[00:28:38] I couldn't load any gamemode scripts. Please verify your server.cfg
+[00:28:38] It needs a gamemode0 line at the very least.
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:29:08] 
+[00:29:08] Server Plugins
+[00:29:08] --------------
+[00:29:08]  Loading plugin: tde.dll
+[00:29:08]   Failed.
+[00:29:08]  Loaded 0 plugins.
+
+[00:29:08] [artwork:crc] blank.dff CRC = 0xA08847A4
+[00:29:08] [artwork:crc] account.txd CRC = 0x8DA3ADE3
+[00:29:08] 
+[00:29:08] Filterscripts
+[00:29:08] ---------------
+[00:29:08]   Loading filterscript 'tde.amx'...
+[00:29:08]   Loaded 1 filterscripts.
+
+[00:29:08] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[00:29:08] 
+----------------------------------
+[00:29:08]   Bare Script
+
+[00:29:08] ----------------------------------
+
+[00:29:08] Number of vehicle models: 0
+[00:30:11] [connection] incoming connection: 127.0.0.1:49666 id: 0
+[00:30:11] [join] charles has joined the server (0:127.0.0.1)
+[00:30:21] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:37:03] 
+[00:37:03] Server Plugins
+[00:37:03] --------------
+[00:37:03]  Loading plugin: sscanf
+[00:37:03] 
+
+[00:37:03]  ===============================
+
+[00:37:03]       sscanf plugin loaded.     
+
+[00:37:03]    (c) 2009 Alex "Y_Less" Cole
+
+[00:37:03]    0.3d-R2 500 Players "dnee"
+
+[00:37:03]  ===============================
+
+[00:37:03]   Loaded.
+[00:37:03]  Loading plugin: TDE
+[00:37:03]   Failed.
+[00:37:03]  Loaded 1 plugins.
+
+[00:37:03] 
+[00:37:03] Filterscripts
+[00:37:03] ---------------
+[00:37:03]   Loading filterscript 'TDE.amx'...
+[00:37:03]   Loaded 1 filterscripts.
+
+[00:37:03] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[00:37:03] 
+----------------------------------
+[00:37:03]   Bare Script
+
+[00:37:03] ----------------------------------
+
+[00:37:03] Number of vehicle models: 0
+[00:37:35] [connection] incoming connection: 127.0.0.1:49813 id: 0
+[00:37:35] [join] charles has joined the server (0:127.0.0.1)
+[00:37:43] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:38:10] 
+[00:38:10] Server Plugins
+[00:38:10] --------------
+[00:38:10]  Loading plugin: sscanf
+[00:38:10] 
+
+[00:38:10]  ===============================
+
+[00:38:10]       sscanf plugin loaded.     
+
+[00:38:10]    (c) 2009 Alex "Y_Less" Cole
+
+[00:38:10]    0.3d-R2 500 Players "dnee"
+
+[00:38:10]  ===============================
+
+[00:38:10]   Loaded.
+[00:38:10]  Loading plugin: TDE
+[00:38:10] 
+TDEditor Plugin loaded, thank you for using.
+
+[00:38:10]   Loaded.
+[00:38:10]  Loaded 2 plugins.
+
+[00:38:10] 
+[00:38:10] Filterscripts
+[00:38:10] ---------------
+[00:38:10]   Loading filterscript 'TDE.amx'...
+[00:38:10]  
+[00:38:10]  
+[00:38:10]  
+[00:38:10]  
+[00:38:10] ___ __  __
+[00:38:10]  | |  \|_  _|.|_ _  _		
+[00:38:10]  | |__/|__(_|||_(_)|			
+[00:38:10]  
+[00:38:10] TDEditor V1.17 by adri1
+[00:38:10] TDEditor loaded
+[00:38:10]  
+[00:38:10]   Loaded 1 filterscripts.
+
+[00:38:10] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[00:38:10] 
+----------------------------------
+[00:38:10]   Bare Script
+
+[00:38:10] ----------------------------------
+
+[00:38:10] Number of vehicle models: 0
+[00:38:37] [connection] incoming connection: 127.0.0.1:57372 id: 0
+[00:38:37] [join] charles has joined the server (0:127.0.0.1)
+[00:40:17] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:40:56] 
+[00:40:56] Server Plugins
+[00:40:56] --------------
+[00:40:56]  Loading plugin: sscanf
+[00:40:56] 
+
+[00:40:56]  ===============================
+
+[00:40:56]       sscanf plugin loaded.     
+
+[00:40:56]    (c) 2009 Alex "Y_Less" Cole
+
+[00:40:56]    0.3d-R2 500 Players "dnee"
+
+[00:40:56]  ===============================
+
+[00:40:56]   Loaded.
+[00:40:56]  Loading plugin: TDE
+[00:40:56] 
+TDEditor Plugin loaded, thank you for using.
+
+[00:40:56]   Loaded.
+[00:40:56]  Loaded 2 plugins.
+
+[00:40:56] [artwork:crc] blank.dff CRC = 0xA08847A4
+[00:40:56] [artwork:crc] account.txd CRC = 0x8DA3ADE3
+[00:40:56] 
+[00:40:56] Filterscripts
+[00:40:56] ---------------
+[00:40:56]   Loading filterscript 'TDE.amx'...
+[00:40:56]  
+[00:40:56]  
+[00:40:56]  
+[00:40:56]  
+[00:40:56] ___ __  __
+[00:40:56]  | |  \|_  _|.|_ _  _		
+[00:40:56]  | |__/|__(_|||_(_)|			
+[00:40:56]  
+[00:40:56] TDEditor V1.17 by adri1
+[00:40:56] TDEditor loaded
+[00:40:56]  
+[00:40:56]   Loaded 1 filterscripts.
+
+[00:40:56] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[00:40:56] 
+----------------------------------
+[00:40:56]   Bare Script
+
+[00:40:56] ----------------------------------
+
+[00:40:56] Number of vehicle models: 0
+[00:41:17] [connection] incoming connection: 127.0.0.1:65244 id: 0
+[00:41:17] [join] charles has joined the server (0:127.0.0.1)
+[00:51:46] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:53:28] 
+[00:53:28] Server Plugins
+[00:53:28] --------------
+[00:53:28]  Loading plugin: sscanf
+[00:53:28] 
+
+[00:53:28]  ===============================
+
+[00:53:28]       sscanf plugin loaded.     
+
+[00:53:28]    (c) 2009 Alex "Y_Less" Cole
+
+[00:53:28]    0.3d-R2 500 Players "dnee"
+
+[00:53:28]  ===============================
+
+[00:53:28]   Loaded.
+[00:53:28]  Loading plugin: TDE
+[00:53:28] 
+TDEditor Plugin loaded, thank you for using.
+
+[00:53:28]   Loaded.
+[00:53:28]  Loaded 2 plugins.
+
+[00:53:28] [artwork:crc] blank.dff CRC = 0xA08847A4
+[00:53:28] [artwork:crc] account.txd CRC = 0x8DA3ADE3
+[00:53:28] 
+[00:53:28] Filterscripts
+[00:53:28] ---------------
+[00:53:28]   Loading filterscript 'TDE.amx'...
+[00:53:28]  
+[00:53:28]  
+[00:53:28]  
+[00:53:28]  
+[00:53:28] ___ __  __
+[00:53:28]  | |  \|_  _|.|_ _  _		
+[00:53:28]  | |__/|__(_|||_(_)|			
+[00:53:28]  
+[00:53:28] TDEditor V1.17 by adri1
+[00:53:28] TDEditor loaded
+[00:53:28]  
+[00:53:28]   Loaded 1 filterscripts.
+
+[00:53:28] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[00:53:28] 
+----------------------------------
+[00:53:28]   Bare Script
+
+[00:53:28] ----------------------------------
+
+[00:53:28] Number of vehicle models: 0
+[00:53:47] [connection] incoming connection: 127.0.0.1:64722 id: 0
+[00:53:47] [join] charles has joined the server (0:127.0.0.1)
+[00:54:02] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:56:17] 
+[00:56:17] Server Plugins
+[00:56:17] --------------
+[00:56:17]  Loading plugin: YSF
+[00:56:17] logprintf = 0x00491FA0
+
+[00:56:17] Error: Unknown Windows server version
+
+[00:56:17]   Loaded.
+[00:56:17]  Loading plugin: sscanf
+[00:56:17] 
+
+[00:56:17]  ===============================
+
+[00:56:17]       sscanf plugin loaded.     
+
+[00:56:17]    (c) 2009 Alex "Y_Less" Cole
+
+[00:56:17]    0.3d-R2 500 Players "dnee"
+
+[00:56:17]  ===============================
+
+[00:56:17]   Loaded.
+[00:56:17]  Loading plugin: TDE
+[00:56:17] 
+TDEditor Plugin loaded, thank you for using.
+
+[00:56:17]   Loaded.
+[00:56:17]  Loaded 3 plugins.
+
+[00:56:17] 
+[00:56:17] Filterscripts
+[00:56:17] ---------------
+[00:56:17]   Loading filterscript 'TDE.amx'...
+[00:56:17]  
+[00:56:17]  
+[00:56:17]  
+[00:56:17]  
+[00:56:17] ___ __  __
+[00:56:17]  | |  \|_  _|.|_ _  _		
+[00:56:17]  | |__/|__(_|||_(_)|			
+[00:56:17]  
+[00:56:17] TDEditor V1.12 by adri1
+[00:56:17] TDEditor loaded
+[00:56:17]  
+[00:56:17]   Loaded 1 filterscripts.
+
+[00:56:17] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[00:56:17] 
+----------------------------------
+[00:56:17]   Bare Script
+
+[00:56:17] ----------------------------------
+
+[00:56:17] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:57:38] 
+[00:57:38] Server Plugins
+[00:57:38] --------------
+[00:57:38]  Loading plugin: YSF
+[00:57:38] logprintf = 0x00491FA0
+
+[00:57:38] Error: Unknown Windows server version
+
+[00:57:38]   Loaded.
+[00:57:38]  Loading plugin: sscanf
+[00:57:38] 
+
+[00:57:38]  ===============================
+
+[00:57:38]       sscanf plugin loaded.     
+
+[00:57:38]    (c) 2009 Alex "Y_Less" Cole
+
+[00:57:38]    0.3d-R2 500 Players "dnee"
+
+[00:57:38]  ===============================
+
+[00:57:38]   Loaded.
+[00:57:38]  Loading plugin: TDE
+[00:57:38] 
+TDEditor Plugin loaded, thank you for using.
+
+[00:57:38]   Loaded.
+[00:57:38]  Loaded 3 plugins.
+
+[00:57:38] 
+[00:57:38] Filterscripts
+[00:57:38] ---------------
+[00:57:38]   Loading filterscript 'TDE.amx'...
+[00:57:38]   Loaded 1 filterscripts.
+
+[00:57:38] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[00:57:38] 
+----------------------------------
+[00:57:38]   Bare Script
+
+[00:57:38] ----------------------------------
+
+[00:57:38] Number of vehicle models: 0
+[00:58:10] [connection] incoming connection: 127.0.0.1:54324 id: 0
+[00:58:10] [join] charles has joined the server (0:127.0.0.1)
+[00:58:16] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:58:35] 
+[00:58:35] Server Plugins
+[00:58:35] --------------
+[00:58:35]  Loading plugin: YSF
+[00:58:35] logprintf = 0x00491FA0
+
+[00:58:35] Error: Unknown Windows server version
+
+[00:58:35]   Loaded.
+[00:58:35]  Loading plugin: sscanf
+[00:58:35] 
+
+[00:58:35]  ===============================
+
+[00:58:35]       sscanf plugin loaded.     
+
+[00:58:35]    (c) 2009 Alex "Y_Less" Cole
+
+[00:58:35]    0.3d-R2 500 Players "dnee"
+
+[00:58:35]  ===============================
+
+[00:58:35]   Loaded.
+[00:58:35]  Loading plugin: TDE
+[00:58:35] 
+TDEditor Plugin loaded, thank you for using.
+
+[00:58:35]   Loaded.
+[00:58:35]  Loaded 3 plugins.
+
+[00:58:35] 
+[00:58:36] Filterscripts
+[00:58:36] ---------------
+[00:58:36]   Loading filterscript 'TDE.amx'...
+[00:58:36]   Loaded 1 filterscripts.
+
+[00:58:36] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[00:58:36] 
+----------------------------------
+[00:58:36]   Bare Script
+
+[00:58:36] ----------------------------------
+
+[00:58:36] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[00:59:57] 
+[00:59:57] Server Plugins
+[00:59:57] --------------
+[00:59:57]  Loading plugin: YSF
+[00:59:57] This version of YSF doesn't support SA-MP 0.3.DL
+[00:59:57] Use another version of YSF or build with SAMP_03DL
+[00:59:57] Error: Unknown Windows server version (0x00491FA0)
+[00:59:57] Error: Big part of YSF will be unusable for you
+[00:59:57]   Loaded.
+[00:59:57]  Loading plugin: sscanf
+[00:59:57] 
+
+[00:59:57]  ===============================
+
+[00:59:57]       sscanf plugin loaded.     
+
+[00:59:57]    (c) 2009 Alex "Y_Less" Cole
+
+[00:59:57]    0.3d-R2 500 Players "dnee"
+
+[00:59:57]  ===============================
+
+[00:59:57]   Loaded.
+[00:59:57]  Loading plugin: TDE
+[00:59:57] 
+TDEditor Plugin loaded, thank you for using.
+
+[00:59:57]   Loaded.
+[00:59:57]  Loaded 3 plugins.
+
+[00:59:57] 
+[00:59:57] Filterscripts
+[00:59:57] ---------------
+[00:59:57]   Loading filterscript 'TDE.amx'...
+[00:59:57]   Loaded 1 filterscripts.
+
+[00:59:57] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[00:59:57] 
+----------------------------------
+[00:59:57]   Bare Script
+
+[00:59:57] ----------------------------------
+
+[00:59:57] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[01:00:57] 
+[01:00:57] Server Plugins
+[01:00:57] --------------
+[01:00:57]  Loading plugin: YSF_DL
+[01:00:57] 
+[01:00:57]  ==============================================
+[01:00:57]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[01:00:57]   (c) 2008 Alex "Y_Less" Cole
+[01:00:57]   (c) 2010 - 2018 kurta999
+[01:00:57]   (c) 2018 - 2020 IllidanS4
+[01:00:57]  Server version: 0.3.DL R1, Windows
+[01:00:57]  ==============================================
+[01:00:57] 
+[01:00:57]   Loaded.
+[01:00:57]  Loading plugin: sscanf
+[01:00:57] 
+
+[01:00:57]  ===============================
+
+[01:00:57]       sscanf plugin loaded.     
+
+[01:00:57]    (c) 2009 Alex "Y_Less" Cole
+
+[01:00:57]    0.3d-R2 500 Players "dnee"
+
+[01:00:57]  ===============================
+
+[01:00:57]   Loaded.
+[01:00:57]  Loading plugin: TDE
+[01:00:57] 
+TDEditor Plugin loaded, thank you for using.
+
+[01:00:57]   Loaded.
+[01:00:57]  Loaded 3 plugins.
+
+[01:00:58] 
+[01:00:58] Filterscripts
+[01:00:58] ---------------
+[01:00:58]   Loading filterscript 'TDE.amx'...
+[01:00:58]   Loaded 1 filterscripts.
+
+[01:00:58] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[01:00:58] 
+----------------------------------
+[01:00:58]   Bare Script
+
+[01:00:58] ----------------------------------
+
+[01:00:58] Number of vehicle models: 0
+[01:01:25] [connection] incoming connection: 127.0.0.1:63549 id: 0
+[01:01:25] [join] charles has joined the server (0:127.0.0.1)
+[01:02:40] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[01:04:00] 
+[01:04:00] Server Plugins
+[01:04:00] --------------
+[01:04:00]  Loading plugin: YSF_DL
+[01:04:00] 
+[01:04:00]  ==============================================
+[01:04:00]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[01:04:00]   (c) 2008 Alex "Y_Less" Cole
+[01:04:00]   (c) 2010 - 2018 kurta999
+[01:04:00]   (c) 2018 - 2020 IllidanS4
+[01:04:00]  Server version: 0.3.DL R1, Windows
+[01:04:00]  ==============================================
+[01:04:00] 
+[01:04:00]   Loaded.
+[01:04:00]  Loading plugin: sscanf
+[01:04:00] 
+
+[01:04:00]  ===============================
+
+[01:04:00]       sscanf plugin loaded.     
+
+[01:04:00]          Version:  2.8.3        
+
+[01:04:00]   (c) 2018 Alex "Y_Less" Cole  
+
+[01:04:00]  ===============================
+
+[01:04:00]   Loaded.
+[01:04:00]  Loading plugin: TDE
+[01:04:00] 
+TDEditor Plugin loaded, thank you for using.
+
+[01:04:00]   Loaded.
+[01:04:00]  Loaded 3 plugins.
+
+[01:04:00] 
+[01:04:00] Filterscripts
+[01:04:00] ---------------
+[01:04:00]   Loading filterscript 'TDE.amx'...
+[01:04:00]  
+[01:04:00]  
+[01:04:00]  
+[01:04:00]  
+[01:04:00] ___ __  __
+[01:04:00]  | |  \|_  _|.|_ _  _		
+[01:04:00]  | |__/|__(_|||_(_)|			
+[01:04:00]  
+[01:04:00] TDEditor V1.18 by adri1
+[01:04:00] TDEditor loaded
+[01:04:00]  
+[01:04:00]   Loaded 1 filterscripts.
+
+[01:04:00] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[01:04:00] 
+----------------------------------
+[01:04:00]   Bare Script
+
+[01:04:00] ----------------------------------
+
+[01:04:00] Number of vehicle models: 0
+[01:04:43] [connection] incoming connection: 127.0.0.1:57838 id: 0
+[01:04:43] [join] charles has joined the server (0:127.0.0.1)
+[01:05:54] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[01:06:28] 
+[01:06:28] Server Plugins
+[01:06:28] --------------
+[01:06:28]  Loading plugin: YSF_DL
+[01:06:28] 
+[01:06:28]  ==============================================
+[01:06:28]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[01:06:28]   (c) 2008 Alex "Y_Less" Cole
+[01:06:28]   (c) 2010 - 2018 kurta999
+[01:06:28]   (c) 2018 - 2020 IllidanS4
+[01:06:28]  Server version: 0.3.DL R1, Windows
+[01:06:28]  ==============================================
+[01:06:28] 
+[01:06:28]   Loaded.
+[01:06:28]  Loading plugin: sscanf
+[01:06:28] 
+
+[01:06:28]  ===============================
+
+[01:06:28]       sscanf plugin loaded.     
+
+[01:06:28]          Version:  2.8.3        
+
+[01:06:28]   (c) 2018 Alex "Y_Less" Cole  
+
+[01:06:28]  ===============================
+
+[01:06:28]   Loaded.
+[01:06:28]  Loading plugin: TDE
+[01:06:28] 
+TDEditor Plugin loaded, thank you for using.
+
+[01:06:28]   Loaded.
+[01:06:28]  Loaded 3 plugins.
+
+[01:06:28] [artwork:crc] blank.dff CRC = 0xA08847A4
+[01:06:28] [artwork:crc] account.txd CRC = 0x8DA3ADE3
+[01:06:28] 
+[01:06:28] Filterscripts
+[01:06:28] ---------------
+[01:06:28]   Loading filterscript 'TDE.amx'...
+[01:06:28]  
+[01:06:28]  
+[01:06:28]  
+[01:06:28]  
+[01:06:28] ___ __  __
+[01:06:28]  | |  \|_  _|.|_ _  _		
+[01:06:28]  | |__/|__(_|||_(_)|			
+[01:06:28]  
+[01:06:28] TDEditor V1.18 by adri1
+[01:06:28] TDEditor loaded
+[01:06:28]  
+[01:06:28]   Loaded 1 filterscripts.
+
+[01:06:28] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[01:06:28] 
+----------------------------------
+[01:06:28]   Bare Script
+
+[01:06:28] ----------------------------------
+
+[01:06:28] Number of vehicle models: 0
+[01:06:52] [connection] incoming connection: 127.0.0.1:57488 id: 0
+[01:06:52] [join] charles has joined the server (0:127.0.0.1)
+[01:10:57] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[23:33:21] 
+[23:33:21] Server Plugins
+[23:33:21] --------------
+[23:33:21]  Loading plugin: YSF_DL
+[23:33:22] 
+[23:33:22]  ==============================================
+[23:33:22]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[23:33:22]   (c) 2008 Alex "Y_Less" Cole
+[23:33:22]   (c) 2010 - 2018 kurta999
+[23:33:22]   (c) 2018 - 2020 IllidanS4
+[23:33:22]  Server version: 0.3.DL R1, Windows
+[23:33:22]  ==============================================
+[23:33:22] 
+[23:33:22]   Loaded.
+[23:33:22]  Loading plugin: sscanf
+[23:33:22] 
+
+[23:33:22]  ===============================
+
+[23:33:22]       sscanf plugin loaded.     
+
+[23:33:22]          Version:  2.8.3        
+
+[23:33:22]   (c) 2018 Alex "Y_Less" Cole  
+
+[23:33:22]  ===============================
+
+[23:33:22]   Loaded.
+[23:33:22]  Loading plugin: TDE
+[23:33:22] 
+TDEditor Plugin loaded, thank you for using.
+
+[23:33:22]   Loaded.
+[23:33:22]  Loaded 3 plugins.
+
+[23:33:22] [artwork:crc] blank.dff CRC = 0xA08847A4
+[23:33:22] [artwork:crc] account.txd CRC = 0x67BADB4
+[23:33:22] 
+[23:33:22] Filterscripts
+[23:33:22] ---------------
+[23:33:22]   Loading filterscript 'TDE.amx'...
+[23:33:22]  
+[23:33:22]  
+[23:33:22]  
+[23:33:22]  
+[23:33:22] ___ __  __
+[23:33:22]  | |  \|_  _|.|_ _  _		
+[23:33:22]  | |__/|__(_|||_(_)|			
+[23:33:22]  
+[23:33:22] TDEditor V1.18 by adri1
+[23:33:22] TDEditor loaded
+[23:33:22]  
+[23:33:22]   Loaded 1 filterscripts.
+
+[23:33:22] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[23:33:22] 
+----------------------------------
+[23:33:22]   Bare Script
+
+[23:33:22] ----------------------------------
+
+[23:33:22] Number of vehicle models: 0
+[23:34:29] [connection] incoming connection: 127.0.0.1:53530 id: 0
+[23:34:30] [join] charles has joined the server (0:127.0.0.1)
+[23:39:42] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[23:44:09] 
+[23:44:09] Server Plugins
+[23:44:09] --------------
+[23:44:09]  Loading plugin: YSF_DL
+[23:44:09] 
+[23:44:09]  ==============================================
+[23:44:09]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[23:44:09]   (c) 2008 Alex "Y_Less" Cole
+[23:44:09]   (c) 2010 - 2018 kurta999
+[23:44:09]   (c) 2018 - 2020 IllidanS4
+[23:44:09]  Server version: 0.3.DL R1, Windows
+[23:44:09]  ==============================================
+[23:44:09] 
+[23:44:09]   Loaded.
+[23:44:09]  Loading plugin: sscanf
+[23:44:09] 
+
+[23:44:09]  ===============================
+
+[23:44:09]       sscanf plugin loaded.     
+
+[23:44:09]          Version:  2.8.3        
+
+[23:44:09]   (c) 2018 Alex "Y_Less" Cole  
+
+[23:44:09]  ===============================
+
+[23:44:09]   Loaded.
+[23:44:09]  Loading plugin: TDE
+[23:44:09] 
+TDEditor Plugin loaded, thank you for using.
+
+[23:44:09]   Loaded.
+[23:44:09]  Loaded 3 plugins.
+
+[23:44:09] [artwork:crc] blank.dff CRC = 0xA08847A4
+[23:44:09] [artwork:crc] account.txd CRC = 0x67BADB4
+[23:44:09] 
+[23:44:09] Filterscripts
+[23:44:09] ---------------
+[23:44:09]   Loading filterscript 'TDE.amx'...
+[23:44:09]  
+[23:44:09]  
+[23:44:09]  
+[23:44:09]  
+[23:44:09] ___ __  __
+[23:44:09]  | |  \|_  _|.|_ _  _		
+[23:44:09]  | |__/|__(_|||_(_)|			
+[23:44:09]  
+[23:44:09] TDEditor V1.18 by adri1
+[23:44:09] TDEditor loaded
+[23:44:09]  
+[23:44:09]   Loaded 1 filterscripts.
+
+[23:44:09] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[23:44:09] 
+----------------------------------
+[23:44:09]   Bare Script
+
+[23:44:09] ----------------------------------
+
+[23:44:09] Number of vehicle models: 0
+[23:44:36] [connection] incoming connection: 127.0.0.1:64595 id: 0
+[23:44:36] [join] charles has joined the server (0:127.0.0.1)
+[23:45:31] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[23:45:43] 
+[23:45:43] Server Plugins
+[23:45:43] --------------
+[23:45:43]  Loading plugin: YSF_DL
+[23:45:43] 
+[23:45:43]  ==============================================
+[23:45:43]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[23:45:43]   (c) 2008 Alex "Y_Less" Cole
+[23:45:43]   (c) 2010 - 2018 kurta999
+[23:45:43]   (c) 2018 - 2020 IllidanS4
+[23:45:43]  Server version: 0.3.DL R1, Windows
+[23:45:43]  ==============================================
+[23:45:43] 
+[23:45:43]   Loaded.
+[23:45:43]  Loading plugin: sscanf
+[23:45:43] 
+
+[23:45:43]  ===============================
+
+[23:45:43]       sscanf plugin loaded.     
+
+[23:45:43]          Version:  2.8.3        
+
+[23:45:43]   (c) 2018 Alex "Y_Less" Cole  
+
+[23:45:43]  ===============================
+
+[23:45:43]   Loaded.
+[23:45:43]  Loading plugin: TDE
+[23:45:43] 
+TDEditor Plugin loaded, thank you for using.
+
+[23:45:43]   Loaded.
+[23:45:43]  Loaded 3 plugins.
+
+[23:45:43] [artwork:crc] blank.dff CRC = 0xA08847A4
+[23:45:43] [artwork:crc] account.txd CRC = 0x95248C66
+[23:45:43] 
+[23:45:43] Filterscripts
+[23:45:43] ---------------
+[23:45:43]   Loading filterscript 'TDE.amx'...
+[23:45:43]  
+[23:45:43]  
+[23:45:43]  
+[23:45:43]  
+[23:45:43] ___ __  __
+[23:45:43]  | |  \|_  _|.|_ _  _		
+[23:45:43]  | |__/|__(_|||_(_)|			
+[23:45:43]  
+[23:45:43] TDEditor V1.18 by adri1
+[23:45:43] TDEditor loaded
+[23:45:43]  
+[23:45:43]   Loaded 1 filterscripts.
+
+[23:45:43] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[23:45:43] 
+----------------------------------
+[23:45:43]   Bare Script
+
+[23:45:43] ----------------------------------
+
+[23:45:43] Number of vehicle models: 0
+[23:46:04] [connection] incoming connection: 127.0.0.1:59990 id: 0
+[23:46:04] [join] charles has joined the server (0:127.0.0.1)
+[00:00:11] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[10:47:35] 
+[10:47:35] Server Plugins
+[10:47:35] --------------
+[10:47:35]  Loading plugin: YSF_DL
+[10:47:36] 
+[10:47:36]  ==============================================
+[10:47:36]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[10:47:36]   (c) 2008 Alex "Y_Less" Cole
+[10:47:36]   (c) 2010 - 2018 kurta999
+[10:47:36]   (c) 2018 - 2020 IllidanS4
+[10:47:36]  Server version: 0.3.DL R1, Windows
+[10:47:36]  ==============================================
+[10:47:36] 
+[10:47:36]   Loaded.
+[10:47:36]  Loading plugin: sscanf
+[10:47:36] 
+
+[10:47:36]  ===============================
+
+[10:47:36]       sscanf plugin loaded.     
+
+[10:47:36]          Version:  2.8.3        
+
+[10:47:36]   (c) 2018 Alex "Y_Less" Cole  
+
+[10:47:36]  ===============================
+
+[10:47:36]   Loaded.
+[10:47:36]  Loading plugin: TDE
+[10:47:36] 
+TDEditor Plugin loaded, thank you for using.
+
+[10:47:36]   Loaded.
+[10:47:36]  Loaded 3 plugins.
+
+[10:47:36] [artwork:crc] blank.dff CRC = 0xA08847A4
+[10:47:36] [artwork:crc] account.txd CRC = 0x95248C66
+[10:47:36] 
+[10:47:36] Filterscripts
+[10:47:36] ---------------
+[10:47:36]   Loading filterscript 'TDE.amx'...
+[10:47:36]  
+[10:47:36]  
+[10:47:36]  
+[10:47:36]  
+[10:47:36] ___ __  __
+[10:47:36]  | |  \|_  _|.|_ _  _		
+[10:47:36]  | |__/|__(_|||_(_)|			
+[10:47:36]  
+[10:47:36] TDEditor V1.18 by adri1
+[10:47:36] TDEditor loaded
+[10:47:36]  
+[10:47:36]   Loaded 1 filterscripts.
+
+[10:47:36] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[10:47:36] 
+----------------------------------
+[10:47:36]   Bare Script
+
+[10:47:36] ----------------------------------
+
+[10:47:36] Number of vehicle models: 0
+[10:48:17] [connection] incoming connection: 127.0.0.1:49203 id: 0
+[10:48:17] [join] charles has joined the server (0:127.0.0.1)
+[12:30:00] [part] charles has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[12:11:27] 
+[12:11:27] Server Plugins
+[12:11:27] --------------
+[12:11:27]  Loading plugin: YSF_DL
+[12:11:27]   Failed.
+[12:11:27]  Loading plugin: sscanf
+[12:11:28]   Failed.
+[12:11:28]  Loading plugin: TDE
+[12:11:28] 
+TDEditor Plugin loaded, thank you for using.
+
+[12:11:28]   Loaded.
+[12:11:28]  Loaded 1 plugins.
+
+[12:11:28] [artwork:crc] blank.dff CRC = 0xA08847A4
+[12:11:28] [artwork:crc] account.txd CRC = 0x95248C66
+[12:11:28] 
+[12:11:28] Filterscripts
+[12:11:28] ---------------
+[12:11:28]   Loading filterscript 'TDE.amx'...
+[12:11:28]   Loaded 1 filterscripts.
+
+[12:11:28] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[12:11:28] 
+----------------------------------
+[12:11:28]   Bare Script
+
+[12:11:28] ----------------------------------
+
+[12:11:28] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[13:36:19] 
+[13:36:19] Server Plugins
+[13:36:19] --------------
+[13:36:19]  Loading plugin: YSF_DL
+[13:36:19]   Failed.
+[13:36:19]  Loading plugin: sscanf
+[13:36:19]   Failed.
+[13:36:19]  Loading plugin: TDE
+[13:36:19] 
+TDEditor Plugin loaded, thank you for using.
+
+[13:36:19]   Loaded.
+[13:36:19]  Loaded 1 plugins.
+
+[13:36:19] [artwork:crc] blank.dff CRC = 0xA08847A4
+[13:36:19] [artwork:crc] account.txd CRC = 0x95248C66
+[13:36:19] 
+[13:36:19] Filterscripts
+[13:36:19] ---------------
+[13:36:19]   Loading filterscript 'TDE.amx'...
+[13:36:19]   Loaded 1 filterscripts.
+
+[13:36:19] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[13:36:19] 
+----------------------------------
+[13:36:19]   Bare Script
+
+[13:36:19] ----------------------------------
+
+[13:36:19] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[13:37:50] 
+[13:37:50] Server Plugins
+[13:37:50] --------------
+[13:37:50]  Loading plugin: YSF_DL
+[13:37:50]   Failed.
+[13:37:50]  Loading plugin: sscanf
+[13:37:50]   Failed.
+[13:37:50]  Loading plugin: TDE
+[13:37:50] 
+TDEditor Plugin loaded, thank you for using.
+
+[13:37:50]   Loaded.
+[13:37:50]  Loaded 1 plugins.
+
+[13:37:50] [artwork:crc] blank.dff CRC = 0xA08847A4
+[13:37:50] [artwork:crc] account.txd CRC = 0x95248C66
+[13:37:50] 
+[13:37:50] Filterscripts
+[13:37:50] ---------------
+[13:37:50]   Loading filterscript 'TDE.amx'...
+[13:37:50]   Loaded 1 filterscripts.
+
+[13:37:50] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[13:37:50] 
+----------------------------------
+[13:37:50]   Bare Script
+
+[13:37:50] ----------------------------------
+
+[13:37:50] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[13:39:35] 
+[13:39:35] Server Plugins
+[13:39:35] --------------
+[13:39:35]  Loading plugin: YSF_DL
+[13:39:35]   Failed.
+[13:39:35]  Loading plugin: sscanf
+[13:39:35]   Failed.
+[13:39:35]  Loading plugin: TDE
+[13:39:35] 
+TDEditor Plugin loaded, thank you for using.
+
+[13:39:35]   Loaded.
+[13:39:35]  Loaded 1 plugins.
+
+[13:39:35] [artwork:crc] blank.dff CRC = 0xA08847A4
+[13:39:35] [artwork:crc] account.txd CRC = 0x95248C66
+[13:39:35] 
+[13:39:35] Filterscripts
+[13:39:35] ---------------
+[13:39:35]   Loading filterscript 'TDE.amx'...
+[13:39:35]   Loaded 1 filterscripts.
+
+[13:39:35] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[13:39:35] 
+----------------------------------
+[13:39:35]   Bare Script
+
+[13:39:35] ----------------------------------
+
+[13:39:35] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[13:48:03] 
+[13:48:03] Server Plugins
+[13:48:03] --------------
+[13:48:03]  Loading plugin: YSF_DL
+[13:48:03]   Failed.
+[13:48:03]  Loading plugin: sscanf
+[13:48:03]   Failed.
+[13:48:03]  Loading plugin: TDE
+[13:48:03] 
+TDEditor Plugin loaded, thank you for using.
+
+[13:48:03]   Loaded.
+[13:48:03]  Loaded 1 plugins.
+
+[13:48:03] [artwork:crc] blank.dff CRC = 0xA08847A4
+[13:48:03] [artwork:crc] account.txd CRC = 0x95248C66
+[13:48:03] 
+[13:48:03] Filterscripts
+[13:48:03] ---------------
+[13:48:03]   Loading filterscript 'TDE.amx'...
+[13:48:03]   Loaded 1 filterscripts.
+
+[13:48:03] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[13:48:03] 
+----------------------------------
+[13:48:03]   Bare Script
+
+[13:48:03] ----------------------------------
+
+[13:48:03] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[14:12:08] 
+[14:12:08] Server Plugins
+[14:12:08] --------------
+[14:12:08]  Loading plugin: YSF_DL
+[14:12:08]   Failed.
+[14:12:08]  Loading plugin: sscanf
+[14:12:08]   Failed.
+[14:12:08]  Loading plugin: TDE
+[14:12:08] 
+TDEditor Plugin loaded, thank you for using.
+
+[14:12:08]   Loaded.
+[14:12:08]  Loaded 1 plugins.
+
+[14:12:08] [artwork:crc] blank.dff CRC = 0xA08847A4
+[14:12:08] [artwork:crc] account.txd CRC = 0x95248C66
+[14:12:08] 
+[14:12:08] Filterscripts
+[14:12:08] ---------------
+[14:12:08]   Loading filterscript 'TDE.amx'...
+[14:12:08]   Loaded 1 filterscripts.
+
+[14:12:08] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[14:12:08] 
+----------------------------------
+[14:12:08]   Bare Script
+
+[14:12:08] ----------------------------------
+
+[14:12:08] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[14:16:37] 
+[14:16:37] Server Plugins
+[14:16:37] --------------
+[14:16:37]  Loading plugin: YSF_DL
+[14:16:37]   Failed.
+[14:16:37]  Loading plugin: sscanf
+[14:16:38]   Failed.
+[14:16:38]  Loading plugin: TDE
+[14:16:38] 
+TDEditor Plugin loaded, thank you for using.
+
+[14:16:38]   Loaded.
+[14:16:38]  Loaded 1 plugins.
+
+[14:16:38] [artwork:crc] blank.dff CRC = 0xA08847A4
+[14:16:38] [artwork:crc] account.txd CRC = 0x95248C66
+[14:16:38] 
+[14:16:38] Filterscripts
+[14:16:38] ---------------
+[14:16:38]   Loading filterscript 'TDE.amx'...
+[14:16:38]   Loaded 1 filterscripts.
+
+[14:16:38] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[14:16:38] 
+----------------------------------
+[14:16:38]   Bare Script
+
+[14:16:38] ----------------------------------
+
+[14:16:38] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[14:17:05] 
+[14:17:05] Server Plugins
+[14:17:05] --------------
+[14:17:05]  Loading plugin: YSF_DL
+[14:17:05]   Failed.
+[14:17:05]  Loading plugin: sscanf
+[14:17:05]   Failed.
+[14:17:05]  Loading plugin: TDE
+[14:17:05] 
+TDEditor Plugin loaded, thank you for using.
+
+[14:17:05]   Loaded.
+[14:17:05]  Loaded 1 plugins.
+
+[14:17:05] [artwork:crc] blank.dff CRC = 0xA08847A4
+[14:17:05] [artwork:crc] account.txd CRC = 0x95248C66
+[14:17:05] 
+[14:17:05] Filterscripts
+[14:17:05] ---------------
+[14:17:05]   Loading filterscript 'TDE.amx'...
+[14:17:05]   Loaded 1 filterscripts.
+
+[14:17:05] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[14:17:05] 
+----------------------------------
+[14:17:05]   Bare Script
+
+[14:17:05] ----------------------------------
+
+[14:17:05] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[14:30:00] 
+[14:30:00] Server Plugins
+[14:30:00] --------------
+[14:30:00]  Loading plugin: YSF_DL
+[14:30:01]   Failed.
+[14:30:01]  Loading plugin: sscanf
+[14:30:01]   Failed.
+[14:30:01]  Loading plugin: TDE
+[14:30:01] 
+TDEditor Plugin loaded, thank you for using.
+
+[14:30:01]   Loaded.
+[14:30:01]  Loaded 1 plugins.
+
+[14:30:01] [artwork:crc] blank.dff CRC = 0xA08847A4
+[14:30:01] [artwork:crc] account.txd CRC = 0x95248C66
+[14:30:01] 
+[14:30:01] Filterscripts
+[14:30:01] ---------------
+[14:30:01]   Loading filterscript 'TDE.amx'...
+[14:30:01]   Loaded 1 filterscripts.
+
+[14:30:01] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[14:30:01] 
+----------------------------------
+[14:30:01]   Bare Script
+
+[14:30:01] ----------------------------------
+
+[14:30:01] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[14:55:36] 
+[14:55:36] Server Plugins
+[14:55:36] --------------
+[14:55:36]  Loading plugin: YSF_DL
+[14:55:36]   Failed.
+[14:55:36]  Loading plugin: sscanf
+[14:55:36]   Failed.
+[14:55:36]  Loading plugin: TDE
+[14:55:36] 
+TDEditor Plugin loaded, thank you for using.
+
+[14:55:36]   Loaded.
+[14:55:36]  Loaded 1 plugins.
+
+[14:55:36] [artwork:crc] blank.dff CRC = 0xA08847A4
+[14:55:36] [artwork:crc] account.txd CRC = 0x95248C66
+[14:55:36] 
+[14:55:36] Filterscripts
+[14:55:36] ---------------
+[14:55:36]   Loading filterscript 'TDE.amx'...
+[14:55:36]   Loaded 1 filterscripts.
+
+[14:55:36] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[14:55:36] 
+----------------------------------
+[14:55:36]   Bare Script
+
+[14:55:36] ----------------------------------
+
+[14:55:36] Number of vehicle models: 0
+[14:56:17] [connection] incoming connection: 127.0.0.1:62068 id: 0
+[14:56:17] [join] text has joined the server (0:127.0.0.1)
+[14:56:24] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[15:37:31] 
+[15:37:31] Server Plugins
+[15:37:31] --------------
+[15:37:31]  Loading plugin: YSF_DL
+[15:37:31]   Failed.
+[15:37:31]  Loading plugin: sscanf
+[15:37:31]   Failed.
+[15:37:31]  Loading plugin: TDE
+[15:37:31] 
+TDEditor Plugin loaded, thank you for using.
+
+[15:37:31]   Loaded.
+[15:37:31]  Loaded 1 plugins.
+
+[15:37:31] [artwork:crc] blank.dff CRC = 0xA08847A4
+[15:37:31] [artwork:crc] account.txd CRC = 0x95248C66
+[15:37:31] 
+[15:37:31] Filterscripts
+[15:37:31] ---------------
+[15:37:31]   Loading filterscript 'TDE.amx'...
+[15:37:31]   Loaded 1 filterscripts.
+
+[15:37:31] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[15:37:31] 
+----------------------------------
+[15:37:31]   Bare Script
+
+[15:37:31] ----------------------------------
+
+[15:37:31] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[16:11:37] 
+[16:11:37] Server Plugins
+[16:11:37] --------------
+[16:11:37]  Loading plugin: YSF_DL.dll
+[16:11:37]   Failed.
+[16:11:37]  Loading plugin: sscanf.dll
+[16:11:37]   Failed.
+[16:11:37]  Loading plugin: TDE.dll
+[16:11:37] 
+TDEditor Plugin loaded, thank you for using.
+
+[16:11:37]   Loaded.
+[16:11:37]  Loaded 1 plugins.
+
+[16:11:37] [artwork:crc] blank.dff CRC = 0xA08847A4
+[16:11:37] [artwork:crc] account.txd CRC = 0x95248C66
+[16:11:37] 
+[16:11:37] Filterscripts
+[16:11:37] ---------------
+[16:11:37]   Loading filterscript 'TDE.amx'...
+[16:11:37]   Loaded 1 filterscripts.
+
+[16:11:37] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[16:11:37] 
+----------------------------------
+[16:11:37]   Bare Script
+
+[16:11:37] ----------------------------------
+
+[16:11:37] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[16:21:36] 
+[16:21:36] Server Plugins
+[16:21:36] --------------
+[16:21:36]  Loading plugin: YSF_DL.dll
+[16:21:36]   Failed.
+[16:21:36]  Loading plugin: sscanf.dll
+[16:21:36]   Failed.
+[16:21:36]  Loading plugin: TDE.dll
+[16:21:36] 
+TDEditor Plugin loaded, thank you for using.
+
+[16:21:36]   Loaded.
+[16:21:36]  Loaded 1 plugins.
+
+[16:21:36] [artwork:crc] blank.dff CRC = 0xA08847A4
+[16:21:36] [artwork:crc] account.txd CRC = 0x95248C66
+[16:21:36] 
+[16:21:36] Filterscripts
+[16:21:36] ---------------
+[16:21:36]   Loading filterscript 'TDE.amx'...
+[16:21:36]   Loaded 1 filterscripts.
+
+[16:21:36] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[16:21:36] 
+----------------------------------
+[16:21:36]   Bare Script
+
+[16:21:36] ----------------------------------
+
+[16:21:36] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[16:51:19] 
+[16:51:19] Server Plugins
+[16:51:19] --------------
+[16:51:19]  Loading plugin: YSF_DL.dll
+[16:51:19]   Failed.
+[16:51:19]  Loading plugin: sscanf.dll
+[16:51:19]   Failed.
+[16:51:19]  Loading plugin: TDE.dll
+[16:51:19] 
+TDEditor Plugin loaded, thank you for using.
+
+[16:51:19]   Loaded.
+[16:51:19]  Loaded 1 plugins.
+
+[16:51:19] [artwork:crc] blank.dff CRC = 0xA08847A4
+[16:51:19] [artwork:crc] account.txd CRC = 0x95248C66
+[16:51:19] 
+[16:51:19] Filterscripts
+[16:51:19] ---------------
+[16:51:19]   Loading filterscript 'TDE.amx'...
+[16:51:19]   Loaded 1 filterscripts.
+
+[16:51:19] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[16:51:19] 
+----------------------------------
+[16:51:19]   Bare Script
+
+[16:51:19] ----------------------------------
+
+[16:51:19] Number of vehicle models: 0
+[16:51:42] [connection] incoming connection: 127.0.0.1:61619 id: 0
+[16:51:42] [join] text has joined the server (0:127.0.0.1)
+[16:52:39] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[17:02:29] 
+[17:02:29] Server Plugins
+[17:02:29] --------------
+[17:02:29]  Loading plugin: YSF_DL.dll
+[17:02:29]   Failed.
+[17:02:29]  Loading plugin: sscanf.dll
+[17:02:29]   Failed.
+[17:02:29]  Loading plugin: TDE.dll
+[17:02:29] 
+TDEditor Plugin loaded, thank you for using.
+
+[17:02:29]   Loaded.
+[17:02:29]  Loaded 1 plugins.
+
+[17:02:29] [artwork:crc] blank.dff CRC = 0xA08847A4
+[17:02:29] [artwork:crc] account.txd CRC = 0x95248C66
+[17:02:29] 
+[17:02:29] Filterscripts
+[17:02:29] ---------------
+[17:02:29]   Loading filterscript 'TDE.amx'...
+[17:02:29]   Loaded 1 filterscripts.
+
+[17:02:29] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[17:02:29] 
+----------------------------------
+[17:02:29]   Bare Script
+
+[17:02:29] ----------------------------------
+
+[17:02:29] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[17:08:05] 
+[17:08:05] Server Plugins
+[17:08:05] --------------
+[17:08:05]  Loading plugin: YSF_DL.dll
+[17:08:06] 
+[17:08:06]  ==============================================
+[17:08:06]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[17:08:06]   (c) 2008 Alex "Y_Less" Cole
+[17:08:06]   (c) 2010 - 2018 kurta999
+[17:08:06]   (c) 2018 - 2020 IllidanS4
+[17:08:06]  Server version: 0.3.DL R1, Windows
+[17:08:06]  ==============================================
+[17:08:06] 
+[17:08:06]   Loaded.
+[17:08:06]  Loading plugin: sscanf.dll
+[17:08:06] 
+[17:08:06]  ===============================
+[17:08:06] 
+[17:08:06]       sscanf plugin loaded.     
+[17:08:06] 
+[17:08:06]          Version: 2.13.8
+[17:08:06] 
+[17:08:06]    (c) 2022 Alex "Y_Less" Cole  
+[17:08:06] 
+[17:08:06]  ===============================
+[17:08:06] 
+[17:08:06]   Loaded.
+[17:08:06]  Loading plugin: TDE.dll
+[17:08:06] 
+TDEditor Plugin loaded, thank you for using.
+
+[17:08:06]   Loaded.
+[17:08:06]  Loaded 3 plugins.
+
+[17:08:06] [artwork:crc] blank.dff CRC = 0xA08847A4
+[17:08:06] [artwork:crc] account.txd CRC = 0x95248C66
+[17:08:06] 
+[17:08:06] Filterscripts
+[17:08:06] ---------------
+[17:08:06]   Loading filterscript 'TDE.amx'...
+[17:08:06]  
+[17:08:06]  
+[17:08:06]  
+[17:08:06]  
+[17:08:06] ___ __  __
+[17:08:06]  | |  \|_  _|.|_ _  _		
+[17:08:06]  | |__/|__(_|||_(_)|			
+[17:08:06]  
+[17:08:06] TDEditor V1.18 by adri1
+[17:08:06] TDEditor loaded
+[17:08:06]  
+[17:08:06]   Loaded 1 filterscripts.
+
+[17:08:06] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[17:08:06] 
+----------------------------------
+[17:08:06]   Bare Script
+
+[17:08:06] ----------------------------------
+
+[17:08:06] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[17:39:42] 
+[17:39:42] Server Plugins
+[17:39:42] --------------
+[17:39:42]  Loading plugin: YSF_DL.dll
+[17:39:42] 
+[17:39:42]  ==============================================
+[17:39:42]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[17:39:42]   (c) 2008 Alex "Y_Less" Cole
+[17:39:42]   (c) 2010 - 2018 kurta999
+[17:39:42]   (c) 2018 - 2020 IllidanS4
+[17:39:42]  Server version: 0.3.DL R1, Windows
+[17:39:42]  ==============================================
+[17:39:42] 
+[17:39:42]   Loaded.
+[17:39:42]  Loading plugin: sscanf.dll
+[17:39:42] 
+[17:39:42]  ===============================
+[17:39:42] 
+[17:39:42]       sscanf plugin loaded.     
+[17:39:42] 
+[17:39:42]          Version: 2.13.8
+[17:39:42] 
+[17:39:42]    (c) 2022 Alex "Y_Less" Cole  
+[17:39:42] 
+[17:39:42]  ===============================
+[17:39:42] 
+[17:39:42]   Loaded.
+[17:39:42]  Loading plugin: TDE.dll
+[17:39:42] 
+TDEditor Plugin loaded, thank you for using.
+
+[17:39:42]   Loaded.
+[17:39:42]  Loaded 3 plugins.
+
+[17:39:42] [artwork:crc] blank.dff CRC = 0xA08847A4
+[17:39:42] [artwork:crc] account.txd CRC = 0x95248C66
+[17:39:42] 
+[17:39:42] Filterscripts
+[17:39:42] ---------------
+[17:39:42]   Loading filterscript 'TDE.amx'...
+[17:39:42]  
+[17:39:42]  
+[17:39:42]  
+[17:39:42]  
+[17:39:42] ___ __  __
+[17:39:42]  | |  \|_  _|.|_ _  _		
+[17:39:42]  | |__/|__(_|||_(_)|			
+[17:39:42]  
+[17:39:42] TDEditor V1.18 by adri1
+[17:39:42] TDEditor loaded
+[17:39:42]  
+[17:39:42]   Loaded 1 filterscripts.
+
+[17:39:42] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[17:39:42] 
+----------------------------------
+[17:39:42]   Bare Script
+
+[17:39:42] ----------------------------------
+
+[17:39:42] Number of vehicle models: 0
+[17:40:17] [connection] incoming connection: 127.0.0.1:49608 id: 0
+[17:40:17] [join] text has joined the server (0:127.0.0.1)
+[17:40:30] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[17:50:47] 
+[17:50:47] Server Plugins
+[17:50:47] --------------
+[17:50:47]  Loading plugin: YSF_DL.dll
+[17:50:47] 
+[17:50:47]  ==============================================
+[17:50:47]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[17:50:47]   (c) 2008 Alex "Y_Less" Cole
+[17:50:47]   (c) 2010 - 2018 kurta999
+[17:50:47]   (c) 2018 - 2020 IllidanS4
+[17:50:47]  Server version: 0.3.DL R1, Windows
+[17:50:47]  ==============================================
+[17:50:47] 
+[17:50:47]   Loaded.
+[17:50:47]  Loading plugin: sscanf.dll
+[17:50:47] 
+[17:50:47]  ===============================
+[17:50:47] 
+[17:50:47]       sscanf plugin loaded.     
+[17:50:47] 
+[17:50:47]          Version: 2.13.8
+[17:50:47] 
+[17:50:47]    (c) 2022 Alex "Y_Less" Cole  
+[17:50:47] 
+[17:50:47]  ===============================
+[17:50:47] 
+[17:50:47]   Loaded.
+[17:50:47]  Loading plugin: TDE.dll
+[17:50:47] 
+TDEditor Plugin loaded, thank you for using.
+
+[17:50:47]   Loaded.
+[17:50:47]  Loaded 3 plugins.
+
+[17:50:47] [artwork:crc] blank.dff CRC = 0xA08847A4
+[17:50:47] [artwork:crc] account.txd CRC = 0x95248C66
+[17:50:47] 
+[17:50:47] Filterscripts
+[17:50:47] ---------------
+[17:50:47]   Loading filterscript 'TDE.amx'...
+[17:50:47]  
+[17:50:47]  
+[17:50:47]  
+[17:50:47]  
+[17:50:47] ___ __  __
+[17:50:47]  | |  \|_  _|.|_ _  _		
+[17:50:47]  | |__/|__(_|||_(_)|			
+[17:50:47]  
+[17:50:47] TDEditor V1.18 by adri1
+[17:50:47] TDEditor loaded
+[17:50:47]  
+[17:50:47]   Loaded 1 filterscripts.
+
+[17:50:47] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[17:50:47] 
+----------------------------------
+[17:50:47]   Bare Script
+
+[17:50:47] ----------------------------------
+
+[17:50:47] Number of vehicle models: 0
+[17:50:50] [connection] incoming connection: 127.0.0.1:54348 id: 0
+[17:50:50] [join] text has joined the server (0:127.0.0.1)
+[17:51:22] [chat] [text]: (q
+[17:51:26] [chat] [text]: textsdads
+[17:51:28] [chat] [text]: (q
+[17:51:31] [part] text has left the server (0:1)
+[17:54:02] [connection] incoming connection: 127.0.0.1:54834 id: 0
+[17:54:02] [join] text has joined the server (0:127.0.0.1)
+[17:54:57] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[21:43:41] 
+[21:43:41] Server Plugins
+[21:43:41] --------------
+[21:43:41]  Loading plugin: YSF_DL.dll
+[21:43:41] 
+[21:43:41]  ==============================================
+[21:43:41]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[21:43:41]   (c) 2008 Alex "Y_Less" Cole
+[21:43:41]   (c) 2010 - 2018 kurta999
+[21:43:41]   (c) 2018 - 2020 IllidanS4
+[21:43:41]  Server version: 0.3.DL R1, Windows
+[21:43:41]  ==============================================
+[21:43:41] 
+[21:43:41]   Loaded.
+[21:43:41]  Loading plugin: sscanf.dll
+[21:43:41] 
+[21:43:41]  ===============================
+[21:43:41] 
+[21:43:41]       sscanf plugin loaded.     
+[21:43:41] 
+[21:43:41]          Version: 2.13.8
+[21:43:41] 
+[21:43:41]    (c) 2022 Alex "Y_Less" Cole  
+[21:43:41] 
+[21:43:41]  ===============================
+[21:43:41] 
+[21:43:41]   Loaded.
+[21:43:41]  Loading plugin: TDE.dll
+[21:43:41] 
+TDEditor Plugin loaded, thank you for using.
+
+[21:43:41]   Loaded.
+[21:43:41]  Loaded 3 plugins.
+
+[21:43:41] [artwork:crc] blank.dff CRC = 0xA08847A4
+[21:43:41] [artwork:crc] account.txd CRC = 0x95248C66
+[21:43:41] 
+[21:43:41] Filterscripts
+[21:43:41] ---------------
+[21:43:41]   Loading filterscript 'TDE.amx'...
+[21:43:41]  
+[21:43:41]  
+[21:43:41]  
+[21:43:41]  
+[21:43:41] ___ __  __
+[21:43:41]  | |  \|_  _|.|_ _  _		
+[21:43:41]  | |__/|__(_|||_(_)|			
+[21:43:41]  
+[21:43:41] TDEditor V1.18 by adri1
+[21:43:41] TDEditor loaded
+[21:43:41]  
+[21:43:41]   Loaded 1 filterscripts.
+
+[21:43:41] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[21:43:41] 
+----------------------------------
+[21:43:41]   Bare Script
+
+[21:43:41] ----------------------------------
+
+[21:43:41] Number of vehicle models: 0
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[09:20:28] 
+[09:20:28] Server Plugins
+[09:20:28] --------------
+[09:20:28]  Loading plugin: YSF_DL.dll
+[09:20:28] 
+[09:20:28]  ==============================================
+[09:20:28]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[09:20:28]   (c) 2008 Alex "Y_Less" Cole
+[09:20:28]   (c) 2010 - 2018 kurta999
+[09:20:28]   (c) 2018 - 2020 IllidanS4
+[09:20:28]  Server version: 0.3.DL R1, Windows
+[09:20:28]  ==============================================
+[09:20:28] 
+[09:20:28]   Loaded.
+[09:20:28]  Loading plugin: sscanf.dll
+[09:20:29] 
+[09:20:29]  ===============================
+[09:20:29] 
+[09:20:29]       sscanf plugin loaded.     
+[09:20:29] 
+[09:20:29]          Version: 2.13.8
+[09:20:29] 
+[09:20:29]    (c) 2022 Alex "Y_Less" Cole  
+[09:20:29] 
+[09:20:29]  ===============================
+[09:20:29] 
+[09:20:29]   Loaded.
+[09:20:29]  Loading plugin: TDE.dll
+[09:20:29] 
+TDEditor Plugin loaded, thank you for using.
+
+[09:20:29]   Loaded.
+[09:20:29]  Loaded 3 plugins.
+
+[09:20:29] [artwork:crc] blank.dff CRC = 0xA08847A4
+[09:20:29] [artwork:crc] account.txd CRC = 0x95248C66
+[09:20:29] 
+[09:20:29] Filterscripts
+[09:20:29] ---------------
+[09:20:29]   Loading filterscript 'TDE.amx'...
+[09:20:29]  
+[09:20:29]  
+[09:20:29]  
+[09:20:29]  
+[09:20:29] ___ __  __
+[09:20:29]  | |  \|_  _|.|_ _  _		
+[09:20:29]  | |__/|__(_|||_(_)|			
+[09:20:29]  
+[09:20:29] TDEditor V1.18 by adri1
+[09:20:29] TDEditor loaded
+[09:20:29]  
+[09:20:29]   Loaded 1 filterscripts.
+
+[09:20:29] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[09:20:29] 
+----------------------------------
+[09:20:29]   Bare Script
+
+[09:20:29] ----------------------------------
+
+[09:20:29] Number of vehicle models: 0
+[09:26:37] [connection] incoming connection: 127.0.0.1:55655 id: 0
+[09:26:37] [join] text has joined the server (0:127.0.0.1)
+[09:26:49] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[11:57:10] 
+[11:57:10] Server Plugins
+[11:57:10] --------------
+[11:57:10]  Loading plugin: YSF_DL.dll
+[11:57:10] 
+[11:57:10]  ==============================================
+[11:57:10]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[11:57:10]   (c) 2008 Alex "Y_Less" Cole
+[11:57:10]   (c) 2010 - 2018 kurta999
+[11:57:10]   (c) 2018 - 2020 IllidanS4
+[11:57:10]  Server version: 0.3.DL R1, Windows
+[11:57:10]  ==============================================
+[11:57:10] 
+[11:57:10]   Loaded.
+[11:57:10]  Loading plugin: sscanf.dll
+[11:57:11] 
+[11:57:11]  ===============================
+[11:57:11] 
+[11:57:11]       sscanf plugin loaded.     
+[11:57:11] 
+[11:57:11]          Version: 2.13.8
+[11:57:11] 
+[11:57:11]    (c) 2022 Alex "Y_Less" Cole  
+[11:57:11] 
+[11:57:11]  ===============================
+[11:57:11] 
+[11:57:11]   Loaded.
+[11:57:11]  Loading plugin: TDE.dll
+[11:57:11] 
+TDEditor Plugin loaded, thank you for using.
+
+[11:57:11]   Loaded.
+[11:57:11]  Loaded 3 plugins.
+
+[11:57:11] [artwork:crc] blank.dff CRC = 0xA08847A4
+[11:57:11] [artwork:crc] account.txd CRC = 0x95248C66
+[11:57:11] 
+[11:57:11] Filterscripts
+[11:57:11] ---------------
+[11:57:11]   Loading filterscript 'TDE.amx'...
+[11:57:11]  
+[11:57:11]  
+[11:57:11]  
+[11:57:11]  
+[11:57:11] ___ __  __
+[11:57:11]  | |  \|_  _|.|_ _  _		
+[11:57:11]  | |__/|__(_|||_(_)|			
+[11:57:11]  
+[11:57:11] TDEditor V1.18 by adri1
+[11:57:11] TDEditor loaded
+[11:57:11]  
+[11:57:11]   Loaded 1 filterscripts.
+
+[11:57:11] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[11:57:11] 
+----------------------------------
+[11:57:11]   Bare Script
+
+[11:57:11] ----------------------------------
+
+[11:57:11] Number of vehicle models: 0
+[11:57:28] [connection] incoming connection: 127.0.0.1:63567 id: 0
+[11:57:28] [join] text has joined the server (0:127.0.0.1)
+[11:57:37] [chat] [text]: tasd
+[11:58:11] [part] text has left the server (0:0)
+[11:58:33] [connection] incoming connection: 127.0.0.1:52969 id: 0
+[11:58:33] [join] text has joined the server (0:127.0.0.1)
+[11:59:57] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[12:05:41] 
+[12:05:41] Server Plugins
+[12:05:41] --------------
+[12:05:41]  Loading plugin: YSF_DL.dll
+[12:05:41] 
+[12:05:41]  ==============================================
+[12:05:41]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[12:05:41]   (c) 2008 Alex "Y_Less" Cole
+[12:05:41]   (c) 2010 - 2018 kurta999
+[12:05:41]   (c) 2018 - 2020 IllidanS4
+[12:05:41]  Server version: 0.3.DL R1, Windows
+[12:05:41]  ==============================================
+[12:05:41] 
+[12:05:41]   Loaded.
+[12:05:41]  Loading plugin: sscanf.dll
+[12:05:41] 
+[12:05:41]  ===============================
+[12:05:41] 
+[12:05:41]       sscanf plugin loaded.     
+[12:05:41] 
+[12:05:41]          Version: 2.13.8
+[12:05:41] 
+[12:05:41]    (c) 2022 Alex "Y_Less" Cole  
+[12:05:41] 
+[12:05:41]  ===============================
+[12:05:41] 
+[12:05:41]   Loaded.
+[12:05:41]  Loading plugin: TDE.dll
+[12:05:41] 
+TDEditor Plugin loaded, thank you for using.
+
+[12:05:41]   Loaded.
+[12:05:41]  Loaded 3 plugins.
+
+[12:05:41] [artwork:crc] blank.dff CRC = 0xA08847A4
+[12:05:41] [artwork:crc] account.txd CRC = 0x95248C66
+[12:05:41] 
+[12:05:41] Filterscripts
+[12:05:41] ---------------
+[12:05:41]   Loading filterscript 'TDE.amx'...
+[12:05:41]  
+[12:05:41]  
+[12:05:41]  
+[12:05:41]  
+[12:05:41] ___ __  __
+[12:05:41]  | |  \|_  _|.|_ _  _		
+[12:05:41]  | |__/|__(_|||_(_)|			
+[12:05:41]  
+[12:05:41] TDEditor V1.18 by adri1
+[12:05:41] TDEditor loaded
+[12:05:41]  
+[12:05:41]   Loaded 1 filterscripts.
+
+[12:05:41] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[12:05:41] 
+----------------------------------
+[12:05:41]   Bare Script
+
+[12:05:41] ----------------------------------
+
+[12:05:41] Number of vehicle models: 0
+[12:06:35] [connection] incoming connection: 127.0.0.1:56349 id: 0
+[12:06:35] [join] text has joined the server (0:127.0.0.1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[12:13:05] 
+[12:13:05] Server Plugins
+[12:13:05] --------------
+[12:13:05]  Loading plugin: YSF_DL.dll
+[12:13:05] 
+[12:13:05]  ==============================================
+[12:13:05]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[12:13:05]   (c) 2008 Alex "Y_Less" Cole
+[12:13:05]   (c) 2010 - 2018 kurta999
+[12:13:05]   (c) 2018 - 2020 IllidanS4
+[12:13:05]  Server version: 0.3.DL R1, Windows
+[12:13:05]  ==============================================
+[12:13:05] 
+[12:13:05]   Loaded.
+[12:13:05]  Loading plugin: sscanf.dll
+[12:13:05] 
+[12:13:05]  ===============================
+[12:13:05] 
+[12:13:05]       sscanf plugin loaded.     
+[12:13:05] 
+[12:13:05]          Version: 2.13.8
+[12:13:05] 
+[12:13:05]    (c) 2022 Alex "Y_Less" Cole  
+[12:13:05] 
+[12:13:05]  ===============================
+[12:13:05] 
+[12:13:05]   Loaded.
+[12:13:05]  Loading plugin: TDE.dll
+[12:13:05] 
+TDEditor Plugin loaded, thank you for using.
+
+[12:13:05]   Loaded.
+[12:13:05]  Loaded 3 plugins.
+
+[12:13:05] [artwork:crc] blank.dff CRC = 0xA08847A4
+[12:13:05] [artwork:crc] account.txd CRC = 0x95248C66
+[12:13:05] 
+[12:13:05] Filterscripts
+[12:13:05] ---------------
+[12:13:05]   Loading filterscript 'TDE.amx'...
+[12:13:05]  
+[12:13:05]  
+[12:13:05]  
+[12:13:05]  
+[12:13:05] ___ __  __
+[12:13:05]  | |  \|_  _|.|_ _  _		
+[12:13:05]  | |__/|__(_|||_(_)|			
+[12:13:05]  
+[12:13:05] TDEditor V1.18 by adri1
+[12:13:05] TDEditor loaded
+[12:13:05]  
+[12:13:05]   Loaded 1 filterscripts.
+
+[12:13:05] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[12:13:05] 
+----------------------------------
+[12:13:05]   Bare Script
+
+[12:13:05] ----------------------------------
+
+[12:13:05] Number of vehicle models: 0
+[12:14:14] [connection] incoming connection: 127.0.0.1:57555 id: 0
+[12:14:14] [join] text has joined the server (0:127.0.0.1)
+[12:22:44] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[17:51:17] 
+[17:51:17] Server Plugins
+[17:51:17] --------------
+[17:51:17]  Loading plugin: YSF_DL.dll
+[17:51:18] 
+[17:51:18]  ==============================================
+[17:51:18]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[17:51:18]   (c) 2008 Alex "Y_Less" Cole
+[17:51:18]   (c) 2010 - 2018 kurta999
+[17:51:18]   (c) 2018 - 2020 IllidanS4
+[17:51:18]  Server version: 0.3.DL R1, Windows
+[17:51:18]  ==============================================
+[17:51:18] 
+[17:51:18]   Loaded.
+[17:51:18]  Loading plugin: sscanf.dll
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[17:51:18] 
+[17:51:18] Server Plugins
+[17:51:18] --------------
+[17:51:18]  Loading plugin: YSF_DL.dll
+[17:51:18] 
+[17:51:18]  ==============================================
+[17:51:18]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[17:51:18]   (c) 2008 Alex "Y_Less" Cole
+[17:51:18]   (c) 2010 - 2018 kurta999
+[17:51:18]   (c) 2018 - 2020 IllidanS4
+[17:51:18]  Server version: 0.3.DL R1, Windows
+[17:51:18]  ==============================================
+[17:51:18] 
+[17:51:18]   Loaded.
+[17:51:18]  Loading plugin: sscanf.dll
+[17:51:19] 
+[17:51:19]  ===============================
+[17:51:19] 
+[17:51:19]       sscanf plugin loaded.     
+[17:51:19] 
+[17:51:19]          Version: 2.13.8
+[17:51:19] 
+[17:51:19]    (c) 2022 Alex "Y_Less" Cole  
+[17:51:19] 
+[17:51:19]  ===============================
+[17:51:19] 
+[17:51:19]   Loaded.
+[17:51:19]  Loading plugin: TDE.dll
+[17:51:19] 
+TDEditor Plugin loaded, thank you for using.
+
+[17:51:19]   Loaded.
+[17:51:19]  Loaded 3 plugins.
+
+[17:51:19] [artwork:crc] blank.dff CRC = 0xA08847A4
+[17:51:19] [artwork:crc] account.txd CRC = 0x8962C90
+[17:51:19] 
+[17:51:19] Filterscripts
+[17:51:19] ---------------
+[17:51:19]   Loading filterscript 'TDE.amx'...
+[17:51:19]  
+[17:51:19]  
+[17:51:19]  
+[17:51:19]  
+[17:51:19] ___ __  __
+[17:51:19]  | |  \|_  _|.|_ _  _		
+[17:51:19]  | |__/|__(_|||_(_)|			
+[17:51:19]  
+[17:51:19] TDEditor V1.18 by adri1
+[17:51:19] TDEditor loaded
+[17:51:19]  
+[17:51:19]   Loaded 1 filterscripts.
+
+[17:51:19] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[17:51:19] 
+----------------------------------
+[17:51:19]   Bare Script
+
+[17:51:19] ----------------------------------
+
+[17:51:19] Number of vehicle models: 0
+[17:53:22] [connection] incoming connection: 127.0.0.1:50709 id: 0
+[17:53:22] [join] text has joined the server (0:127.0.0.1)
+[17:56:38] [chat] [text]: asdasd
+[17:56:50] [part] text has left the server (0:1)
+[17:58:32] [connection] incoming connection: 127.0.0.1:58614 id: 0
+[17:58:33] [join] text has joined the server (0:127.0.0.1)
+[18:18:49] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[16:01:13] 
+[16:01:13] Server Plugins
+[16:01:13] --------------
+[16:01:13]  Loading plugin: YSF_DL.dll
+[16:01:13] 
+[16:01:13]  ==============================================
+[16:01:13]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[16:01:13]   (c) 2008 Alex "Y_Less" Cole
+[16:01:13]   (c) 2010 - 2018 kurta999
+[16:01:13]   (c) 2018 - 2020 IllidanS4
+[16:01:13]  Server version: 0.3.DL R1, Windows
+[16:01:13]  ==============================================
+[16:01:13] 
+[16:01:13]   Loaded.
+[16:01:13]  Loading plugin: sscanf.dll
+[16:01:13] 
+[16:01:13]  ===============================
+[16:01:13] 
+[16:01:13]       sscanf plugin loaded.     
+[16:01:13] 
+[16:01:13]          Version: 2.13.8
+[16:01:13] 
+[16:01:13]    (c) 2022 Alex "Y_Less" Cole  
+[16:01:13] 
+[16:01:13]  ===============================
+[16:01:13] 
+[16:01:13]   Loaded.
+[16:01:13]  Loading plugin: TDE.dll
+[16:01:13] 
+TDEditor Plugin loaded, thank you for using.
+
+[16:01:13]   Loaded.
+[16:01:13]  Loaded 3 plugins.
+
+[16:01:13] [artwork:crc] blank.dff CRC = 0xA08847A4
+[16:01:13] [artwork:crc] account.txd CRC = 0x8962C90
+[16:01:13] 
+[16:01:13] Filterscripts
+[16:01:13] ---------------
+[16:01:13]   Loading filterscript 'TDE.amx'...
+[16:01:13]  
+[16:01:13]  
+[16:01:13]  
+[16:01:13]  
+[16:01:13] ___ __  __
+[16:01:13]  | |  \|_  _|.|_ _  _		
+[16:01:13]  | |__/|__(_|||_(_)|			
+[16:01:13]  
+[16:01:13] TDEditor V1.18 by adri1
+[16:01:13] TDEditor loaded
+[16:01:13]  
+[16:01:13]   Loaded 1 filterscripts.
+
+[16:01:13] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[16:01:13] 
+----------------------------------
+[16:01:13]   Bare Script
+
+[16:01:13] ----------------------------------
+
+[16:01:13] Number of vehicle models: 0
+[16:02:16] [connection] incoming connection: 127.0.0.1:59299 id: 0
+[16:02:16] [join] text has joined the server (0:127.0.0.1)
+[17:36:43] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[20:11:49] 
+[20:11:49] Server Plugins
+[20:11:49] --------------
+[20:11:49]  Loading plugin: YSF_DL.dll
+[20:11:50] 
+[20:11:50]  ==============================================
+[20:11:50]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[20:11:50]   (c) 2008 Alex "Y_Less" Cole
+[20:11:50]   (c) 2010 - 2018 kurta999
+[20:11:50]   (c) 2018 - 2020 IllidanS4
+[20:11:50]  Server version: 0.3.DL R1, Windows
+[20:11:50]  ==============================================
+[20:11:50] 
+[20:11:50]   Loaded.
+[20:11:50]  Loading plugin: sscanf.dll
+[20:11:50] 
+[20:11:50]  ===============================
+[20:11:50] 
+[20:11:50]       sscanf plugin loaded.     
+[20:11:50] 
+[20:11:50]          Version: 2.13.8
+[20:11:50] 
+[20:11:50]    (c) 2022 Alex "Y_Less" Cole  
+[20:11:50] 
+[20:11:50]  ===============================
+[20:11:50] 
+[20:11:50]   Loaded.
+[20:11:50]  Loading plugin: TDE.dll
+[20:11:50] 
+TDEditor Plugin loaded, thank you for using.
+
+[20:11:50]   Loaded.
+[20:11:50]  Loaded 3 plugins.
+
+[20:11:50] [artwork:crc] blank.dff CRC = 0xA08847A4
+[20:11:50] [artwork:crc] account.txd CRC = 0x8962C90
+[20:11:51] 
+[20:11:51] Filterscripts
+[20:11:51] ---------------
+[20:11:51]   Loading filterscript 'TDE.amx'...
+[20:11:51]  
+[20:11:51]  
+[20:11:51]  
+[20:11:51]  
+[20:11:51] ___ __  __
+[20:11:51]  | |  \|_  _|.|_ _  _		
+[20:11:51]  | |__/|__(_|||_(_)|			
+[20:11:51]  
+[20:11:51] TDEditor V1.18 by adri1
+[20:11:51] TDEditor loaded
+[20:11:51]  
+[20:11:51]   Loaded 1 filterscripts.
+
+[20:11:51] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[20:11:51] 
+----------------------------------
+[20:11:51]   Bare Script
+
+[20:11:51] ----------------------------------
+
+[20:11:51] Number of vehicle models: 0
+[20:12:43] [connection] incoming connection: 127.0.0.1:62146 id: 0
+[20:12:43] [join] text has joined the server (0:127.0.0.1)
+[20:13:21] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[17:35:37] 
+[17:35:37] Server Plugins
+[17:35:37] --------------
+[17:35:37]  Loading plugin: YSF_DL.dll
+[17:35:37] 
+[17:35:37]  ==============================================
+[17:35:37]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[17:35:37]   (c) 2008 Alex "Y_Less" Cole
+[17:35:37]   (c) 2010 - 2018 kurta999
+[17:35:37]   (c) 2018 - 2020 IllidanS4
+[17:35:37]  Server version: 0.3.DL R1, Windows
+[17:35:37]  ==============================================
+[17:35:37] 
+[17:35:37]   Loaded.
+[17:35:37]  Loading plugin: sscanf.dll
+[17:35:37] 
+[17:35:37]  ===============================
+[17:35:37] 
+[17:35:37]       sscanf plugin loaded.     
+[17:35:37] 
+[17:35:37]          Version: 2.13.8
+[17:35:37] 
+[17:35:37]    (c) 2022 Alex "Y_Less" Cole  
+[17:35:37] 
+[17:35:37]  ===============================
+[17:35:37] 
+[17:35:37]   Loaded.
+[17:35:37]  Loading plugin: TDE.dll
+[17:35:37] 
+TDEditor Plugin loaded, thank you for using.
+
+[17:35:37]   Loaded.
+[17:35:37]  Loaded 3 plugins.
+
+[17:35:37] [artwork:crc] blank.dff CRC = 0xA08847A4
+[17:35:37] [artwork:crc] account.txd CRC = 0x8962C90
+[17:35:37] 
+[17:35:37] Filterscripts
+[17:35:37] ---------------
+[17:35:37]   Loading filterscript 'TDE.amx'...
+[17:35:37]  
+[17:35:37]  
+[17:35:37]  
+[17:35:37]  
+[17:35:37] ___ __  __
+[17:35:37]  | |  \|_  _|.|_ _  _		
+[17:35:37]  | |__/|__(_|||_(_)|			
+[17:35:37]  
+[17:35:37] TDEditor V1.18 by adri1
+[17:35:37] TDEditor loaded
+[17:35:37]  
+[17:35:37]   Loaded 1 filterscripts.
+
+[17:35:37] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[17:35:37] 
+----------------------------------
+[17:35:37]   Bare Script
+
+[17:35:37] ----------------------------------
+
+[17:35:37] Number of vehicle models: 0
+[17:36:01] [connection] incoming connection: 127.0.0.1:59759 id: 0
+[17:36:01] [join] text has joined the server (0:127.0.0.1)
+[17:54:24] [part] text has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[16:39:02] 
+[16:39:02] Server Plugins
+[16:39:02] --------------
+[16:39:02]  Loading plugin: YSF_DL.dll
+[16:39:02] 
+[16:39:02]  ==============================================
+[16:39:02]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[16:39:02]   (c) 2008 Alex "Y_Less" Cole
+[16:39:02]   (c) 2010 - 2018 kurta999
+[16:39:02]   (c) 2018 - 2020 IllidanS4
+[16:39:02]  Server version: 0.3.DL R1, Windows
+[16:39:02]  ==============================================
+[16:39:02] 
+[16:39:02]   Loaded.
+[16:39:02]  Loading plugin: sscanf.dll
+[16:39:03] 
+[16:39:03]  ===============================
+[16:39:03] 
+[16:39:03]       sscanf plugin loaded.     
+[16:39:03] 
+[16:39:03]          Version: 2.13.8
+[16:39:03] 
+[16:39:03]    (c) 2022 Alex "Y_Less" Cole  
+[16:39:03] 
+[16:39:03]  ===============================
+[16:39:03] 
+[16:39:03]   Loaded.
+[16:39:03]  Loading plugin: TDE.dll
+[16:39:03] 
+TDEditor Plugin loaded, thank you for using.
+
+[16:39:03]   Loaded.
+[16:39:03]  Loaded 3 plugins.
+
+[16:39:03] [artwork:crc] blank.dff CRC = 0xA08847A4
+[16:39:03] [artwork:crc] account.txd CRC = 0x5A6A705D
+[16:39:03] 
+[16:39:03] Filterscripts
+[16:39:03] ---------------
+[16:39:03]   Loading filterscript 'TDE.amx'...
+[16:39:03]  
+[16:39:03]  
+[16:39:03]  
+[16:39:03]  
+[16:39:03] ___ __  __
+[16:39:03]  | |  \|_  _|.|_ _  _		
+[16:39:03]  | |__/|__(_|||_(_)|			
+[16:39:03]  
+[16:39:03] TDEditor V1.18 by adri1
+[16:39:03] TDEditor loaded
+[16:39:03]  
+[16:39:03]   Loaded 1 filterscripts.
+
+[16:39:03] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[16:39:03] 
+----------------------------------
+[16:39:03]   Bare Script
+
+[16:39:03] ----------------------------------
+
+[16:39:03] Number of vehicle models: 0
+[16:39:36] [connection] incoming connection: 127.0.0.1:59493 id: 0
+[16:39:36] [join] mynickname has joined the server (0:127.0.0.1)
+[16:41:32] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[16:49:01] 
+[16:49:01] Server Plugins
+[16:49:01] --------------
+[16:49:01]  Loading plugin: YSF_DL.dll
+[16:49:01] 
+[16:49:01]  ==============================================
+[16:49:01]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[16:49:01]   (c) 2008 Alex "Y_Less" Cole
+[16:49:01]   (c) 2010 - 2018 kurta999
+[16:49:01]   (c) 2018 - 2020 IllidanS4
+[16:49:01]  Server version: 0.3.DL R1, Windows
+[16:49:01]  ==============================================
+[16:49:01] 
+[16:49:01]   Loaded.
+[16:49:01]  Loading plugin: sscanf.dll
+[16:49:01] 
+[16:49:01]  ===============================
+[16:49:01] 
+[16:49:01]       sscanf plugin loaded.     
+[16:49:01] 
+[16:49:01]          Version: 2.13.8
+[16:49:01] 
+[16:49:01]    (c) 2022 Alex "Y_Less" Cole  
+[16:49:01] 
+[16:49:01]  ===============================
+[16:49:01] 
+[16:49:01]   Loaded.
+[16:49:01]  Loading plugin: TDE.dll
+[16:49:01] 
+TDEditor Plugin loaded, thank you for using.
+
+[16:49:01]   Loaded.
+[16:49:01]  Loaded 3 plugins.
+
+[16:49:01] [artwork:crc] blank.dff CRC = 0xA08847A4
+[16:49:01] [artwork:crc] account.txd CRC = 0xFC004B11
+[16:49:01] 
+[16:49:01] Filterscripts
+[16:49:01] ---------------
+[16:49:01]   Loading filterscript 'TDE.amx'...
+[16:49:01]  
+[16:49:01]  
+[16:49:01]  
+[16:49:01]  
+[16:49:01] ___ __  __
+[16:49:01]  | |  \|_  _|.|_ _  _		
+[16:49:01]  | |__/|__(_|||_(_)|			
+[16:49:01]  
+[16:49:01] TDEditor V1.18 by adri1
+[16:49:01] TDEditor loaded
+[16:49:01]  
+[16:49:01]   Loaded 1 filterscripts.
+
+[16:49:01] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[16:49:01] 
+----------------------------------
+[16:49:01]   Bare Script
+
+[16:49:01] ----------------------------------
+
+[16:49:01] Number of vehicle models: 0
+[16:49:24] [connection] incoming connection: 127.0.0.1:64140 id: 0
+[16:49:24] [join] mynickname has joined the server (0:127.0.0.1)
+[16:50:42] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[16:54:15] 
+[16:54:15] Server Plugins
+[16:54:15] --------------
+[16:54:15]  Loading plugin: YSF_DL.dll
+[16:54:15] 
+[16:54:15]  ==============================================
+[16:54:15]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[16:54:15]   (c) 2008 Alex "Y_Less" Cole
+[16:54:15]   (c) 2010 - 2018 kurta999
+[16:54:15]   (c) 2018 - 2020 IllidanS4
+[16:54:15]  Server version: 0.3.DL R1, Windows
+[16:54:15]  ==============================================
+[16:54:15] 
+[16:54:15]   Loaded.
+[16:54:15]  Loading plugin: sscanf.dll
+[16:54:15] 
+[16:54:15]  ===============================
+[16:54:15] 
+[16:54:15]       sscanf plugin loaded.     
+[16:54:15] 
+[16:54:15]          Version: 2.13.8
+[16:54:15] 
+[16:54:15]    (c) 2022 Alex "Y_Less" Cole  
+[16:54:15] 
+[16:54:15]  ===============================
+[16:54:15] 
+[16:54:15]   Loaded.
+[16:54:15]  Loading plugin: TDE.dll
+[16:54:15] 
+TDEditor Plugin loaded, thank you for using.
+
+[16:54:15]   Loaded.
+[16:54:15]  Loaded 3 plugins.
+
+[16:54:15] [artwork:crc] blank.dff CRC = 0xA08847A4
+[16:54:15] [artwork:crc] account.txd CRC = 0x7C2B5E04
+[16:54:15] 
+[16:54:15] Filterscripts
+[16:54:15] ---------------
+[16:54:15]   Loading filterscript 'TDE.amx'...
+[16:54:15]  
+[16:54:15]  
+[16:54:15]  
+[16:54:15]  
+[16:54:15] ___ __  __
+[16:54:15]  | |  \|_  _|.|_ _  _		
+[16:54:15]  | |__/|__(_|||_(_)|			
+[16:54:15]  
+[16:54:15] TDEditor V1.18 by adri1
+[16:54:15] TDEditor loaded
+[16:54:15]  
+[16:54:15]   Loaded 1 filterscripts.
+
+[16:54:15] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[16:54:15] 
+----------------------------------
+[16:54:15]   Bare Script
+
+[16:54:15] ----------------------------------
+
+[16:54:15] Number of vehicle models: 0
+[16:54:38] [connection] incoming connection: 127.0.0.1:51068 id: 0
+[16:54:38] [join] mynickname has joined the server (0:127.0.0.1)
+[16:55:38] [chat] [mynickname]: .
+[17:18:32] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[19:51:51] 
+[19:51:51] Server Plugins
+[19:51:51] --------------
+[19:51:51]  Loading plugin: YSF_DL.dll
+[19:51:51] 
+[19:51:51]  ==============================================
+[19:51:51]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[19:51:51]   (c) 2008 Alex "Y_Less" Cole
+[19:51:51]   (c) 2010 - 2018 kurta999
+[19:51:51]   (c) 2018 - 2020 IllidanS4
+[19:51:51]  Server version: 0.3.DL R1, Windows
+[19:51:51]  ==============================================
+[19:51:51] 
+[19:51:51]   Loaded.
+[19:51:51]  Loading plugin: sscanf.dll
+[19:51:51] 
+[19:51:51]  ===============================
+[19:51:51] 
+[19:51:51]       sscanf plugin loaded.     
+[19:51:51] 
+[19:51:51]          Version: 2.13.8
+[19:51:51] 
+[19:51:51]    (c) 2022 Alex "Y_Less" Cole  
+[19:51:51] 
+[19:51:51]  ===============================
+[19:51:51] 
+[19:51:51]   Loaded.
+[19:51:51]  Loading plugin: TDE.dll
+[19:51:51] 
+TDEditor Plugin loaded, thank you for using.
+
+[19:51:51]   Loaded.
+[19:51:51]  Loaded 3 plugins.
+
+[19:51:51] [artwork:crc] blank.dff CRC = 0xA08847A4
+[19:51:51] [artwork:crc] account.txd CRC = 0x25849192
+[19:51:52] 
+[19:51:52] Filterscripts
+[19:51:52] ---------------
+[19:51:52]   Loading filterscript 'TDE.amx'...
+[19:51:52]  
+[19:51:52]  
+[19:51:52]  
+[19:51:52]  
+[19:51:52] ___ __  __
+[19:51:52]  | |  \|_  _|.|_ _  _		
+[19:51:52]  | |__/|__(_|||_(_)|			
+[19:51:52]  
+[19:51:52] TDEditor V1.18 by adri1
+[19:51:52] TDEditor loaded
+[19:51:52]  
+[19:51:52]   Loaded 1 filterscripts.
+
+[19:51:52] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[19:51:52] 
+----------------------------------
+[19:51:52]   Bare Script
+
+[19:51:52] ----------------------------------
+
+[19:51:52] Number of vehicle models: 0
+[19:52:13] [connection] incoming connection: 127.0.0.1:52128 id: 0
+[19:52:13] [join] mynickname has joined the server (0:127.0.0.1)
+[19:58:02] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[20:10:14] 
+[20:10:14] Server Plugins
+[20:10:14] --------------
+[20:10:14]  Loading plugin: YSF_DL.dll
+[20:10:14] 
+[20:10:14]  ==============================================
+[20:10:14]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[20:10:14]   (c) 2008 Alex "Y_Less" Cole
+[20:10:14]   (c) 2010 - 2018 kurta999
+[20:10:14]   (c) 2018 - 2020 IllidanS4
+[20:10:14]  Server version: 0.3.DL R1, Windows
+[20:10:14]  ==============================================
+[20:10:14] 
+[20:10:14]   Loaded.
+[20:10:14]  Loading plugin: sscanf.dll
+[20:10:14] 
+[20:10:14]  ===============================
+[20:10:14] 
+[20:10:14]       sscanf plugin loaded.     
+[20:10:14] 
+[20:10:14]          Version: 2.13.8
+[20:10:14] 
+[20:10:14]    (c) 2022 Alex "Y_Less" Cole  
+[20:10:14] 
+[20:10:14]  ===============================
+[20:10:14] 
+[20:10:14]   Loaded.
+[20:10:14]  Loading plugin: TDE.dll
+[20:10:14] 
+TDEditor Plugin loaded, thank you for using.
+
+[20:10:14]   Loaded.
+[20:10:14]  Loaded 3 plugins.
+
+[20:10:14] [artwork:crc] blank.dff CRC = 0xA08847A4
+[20:10:14] [artwork:crc] account.txd CRC = 0x25849192
+[20:10:14] 
+[20:10:14] Filterscripts
+[20:10:14] ---------------
+[20:10:14]   Loading filterscript 'TDE.amx'...
+[20:10:14]  
+[20:10:14]  
+[20:10:14]  
+[20:10:14]  
+[20:10:14] ___ __  __
+[20:10:14]  | |  \|_  _|.|_ _  _		
+[20:10:14]  | |__/|__(_|||_(_)|			
+[20:10:14]  
+[20:10:14] TDEditor V1.18 by adri1
+[20:10:14] TDEditor loaded
+[20:10:14]  
+[20:10:14]   Loaded 1 filterscripts.
+
+[20:10:14] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[20:10:14] 
+----------------------------------
+[20:10:14]   Bare Script
+
+[20:10:14] ----------------------------------
+
+[20:10:14] Number of vehicle models: 0
+[20:34:49] [connection] incoming connection: 127.0.0.1:64150 id: 0
+[20:34:49] [join] mynickname has joined the server (0:127.0.0.1)
+[20:37:30] [chat] [mynickname]: .
+[20:37:31] [chat] [mynickname]: .
+[20:37:34] [chat] [mynickname]: ..
+[20:42:16] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[23:02:13] 
+[23:02:13] Server Plugins
+[23:02:13] --------------
+[23:02:13]  Loading plugin: YSF_DL.dll
+[23:02:13] 
+[23:02:13]  ==============================================
+[23:02:13]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[23:02:13]   (c) 2008 Alex "Y_Less" Cole
+[23:02:13]   (c) 2010 - 2018 kurta999
+[23:02:13]   (c) 2018 - 2020 IllidanS4
+[23:02:13]  Server version: 0.3.DL R1, Windows
+[23:02:13]  ==============================================
+[23:02:13] 
+[23:02:13]   Loaded.
+[23:02:13]  Loading plugin: sscanf.dll
+[23:02:13] 
+[23:02:13]  ===============================
+[23:02:13] 
+[23:02:13]       sscanf plugin loaded.     
+[23:02:13] 
+[23:02:13]          Version: 2.13.8
+[23:02:13] 
+[23:02:13]    (c) 2022 Alex "Y_Less" Cole  
+[23:02:13] 
+[23:02:13]  ===============================
+[23:02:13] 
+[23:02:13]   Loaded.
+[23:02:13]  Loading plugin: TDE.dll
+[23:02:13] 
+TDEditor Plugin loaded, thank you for using.
+
+[23:02:13]   Loaded.
+[23:02:13]  Loaded 3 plugins.
+
+[23:02:13] [artwork:crc] blank.dff CRC = 0xA08847A4
+[23:02:13] [artwork:crc] account.txd CRC = 0x1071FA50
+[23:02:13] 
+[23:02:13] Filterscripts
+[23:02:13] ---------------
+[23:02:13]   Loading filterscript 'TDE.amx'...
+[23:02:13]  
+[23:02:13]  
+[23:02:13]  
+[23:02:13]  
+[23:02:13] ___ __  __
+[23:02:13]  | |  \|_  _|.|_ _  _		
+[23:02:13]  | |__/|__(_|||_(_)|			
+[23:02:13]  
+[23:02:13] TDEditor V1.18 by adri1
+[23:02:13] TDEditor loaded
+[23:02:13]  
+[23:02:13]   Loaded 1 filterscripts.
+
+[23:02:13] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[23:02:13] 
+----------------------------------
+[23:02:13]   Bare Script
+
+[23:02:13] ----------------------------------
+
+[23:02:13] Number of vehicle models: 0
+[23:02:42] [connection] incoming connection: 127.0.0.1:61526 id: 0
+[23:02:42] [join] mynickname has joined the server (0:127.0.0.1)
+[23:04:07] sscanf warning (C:\Users\barto\Desktop\GrandTheftAutoStories\textdraw-editor\filterscripts\tde.pwn:5359): "String buffer overflow."
+[23:13:18] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[20:06:45] 
+[20:06:45] Server Plugins
+[20:06:45] --------------
+[20:06:45]  Loading plugin: YSF_DL.dll
+[20:06:45] 
+[20:06:45]  ==============================================
+[20:06:45]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[20:06:45]   (c) 2008 Alex "Y_Less" Cole
+[20:06:45]   (c) 2010 - 2018 kurta999
+[20:06:45]   (c) 2018 - 2020 IllidanS4
+[20:06:45]  Server version: 0.3.DL R1, Windows
+[20:06:45]  ==============================================
+[20:06:45] 
+[20:06:45]   Loaded.
+[20:06:45]  Loading plugin: sscanf.dll
+[20:06:45] 
+[20:06:45]  ===============================
+[20:06:45] 
+[20:06:45]       sscanf plugin loaded.     
+[20:06:45] 
+[20:06:45]          Version: 2.13.8
+[20:06:45] 
+[20:06:45]    (c) 2022 Alex "Y_Less" Cole  
+[20:06:45] 
+[20:06:45]  ===============================
+[20:06:45] 
+[20:06:45]   Loaded.
+[20:06:45]  Loading plugin: TDE.dll
+[20:06:45] 
+TDEditor Plugin loaded, thank you for using.
+
+[20:06:45]   Loaded.
+[20:06:45]  Loaded 3 plugins.
+
+[20:06:45] [artwork:crc] blank.dff CRC = 0xA08847A4
+[20:06:45] [artwork:crc] account.txd CRC = 0x293950E1
+[20:06:45] 
+[20:06:45] Filterscripts
+[20:06:45] ---------------
+[20:06:45]   Loading filterscript 'TDE.amx'...
+[20:06:45]  
+[20:06:45]  
+[20:06:45]  
+[20:06:45]  
+[20:06:45] ___ __  __
+[20:06:45]  | |  \|_  _|.|_ _  _		
+[20:06:45]  | |__/|__(_|||_(_)|			
+[20:06:45]  
+[20:06:45] TDEditor V1.18 by adri1
+[20:06:45] TDEditor loaded
+[20:06:45]  
+[20:06:45]   Loaded 1 filterscripts.
+
+[20:06:45] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[20:06:45] 
+----------------------------------
+[20:06:45]   Bare Script
+
+[20:06:45] ----------------------------------
+
+[20:06:45] Number of vehicle models: 0
+[20:07:55] [connection] incoming connection: 127.0.0.1:50919 id: 0
+[20:07:55] [join] mynickname has joined the server (0:127.0.0.1)
+[20:09:40] [chat] [mynickname]: .
+[20:43:27] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[21:47:20] 
+[21:47:20] Server Plugins
+[21:47:20] --------------
+[21:47:20]  Loading plugin: YSF_DL.dll
+[21:47:20] 
+[21:47:20]  ==============================================
+[21:47:20]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[21:47:20]   (c) 2008 Alex "Y_Less" Cole
+[21:47:20]   (c) 2010 - 2018 kurta999
+[21:47:20]   (c) 2018 - 2020 IllidanS4
+[21:47:20]  Server version: 0.3.DL R1, Windows
+[21:47:20]  ==============================================
+[21:47:20] 
+[21:47:20]   Loaded.
+[21:47:20]  Loading plugin: sscanf.dll
+[21:47:20] 
+[21:47:20]  ===============================
+[21:47:20] 
+[21:47:20]       sscanf plugin loaded.     
+[21:47:20] 
+[21:47:20]          Version: 2.13.8
+[21:47:20] 
+[21:47:20]    (c) 2022 Alex "Y_Less" Cole  
+[21:47:20] 
+[21:47:20]  ===============================
+[21:47:20] 
+[21:47:20]   Loaded.
+[21:47:20]  Loading plugin: TDE.dll
+[21:47:20] 
+TDEditor Plugin loaded, thank you for using.
+
+[21:47:20]   Loaded.
+[21:47:20]  Loaded 3 plugins.
+
+[21:47:20] [artwork:crc] blank.dff CRC = 0xA08847A4
+[21:47:20] [artwork:crc] account.txd CRC = 0x195A764A
+[21:47:21] 
+[21:47:21] Filterscripts
+[21:47:21] ---------------
+[21:47:21]   Loading filterscript 'TDE.amx'...
+[21:47:21]  
+[21:47:21]  
+[21:47:21]  
+[21:47:21]  
+[21:47:21] ___ __  __
+[21:47:21]  | |  \|_  _|.|_ _  _		
+[21:47:21]  | |__/|__(_|||_(_)|			
+[21:47:21]  
+[21:47:21] TDEditor V1.18 by adri1
+[21:47:21] TDEditor loaded
+[21:47:21]  
+[21:47:21]   Loaded 1 filterscripts.
+
+[21:47:21] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[21:47:21] 
+----------------------------------
+[21:47:21]   Bare Script
+
+[21:47:21] ----------------------------------
+
+[21:47:21] Number of vehicle models: 0
+[21:47:53] [connection] incoming connection: 127.0.0.1:56232 id: 0
+[21:47:53] [join] mynickname has joined the server (0:127.0.0.1)
+[21:49:14] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[22:22:04] 
+[22:22:04] Server Plugins
+[22:22:04] --------------
+[22:22:04]  Loading plugin: YSF_DL.dll
+[22:22:04] 
+[22:22:04]  ==============================================
+[22:22:04]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[22:22:04]   (c) 2008 Alex "Y_Less" Cole
+[22:22:04]   (c) 2010 - 2018 kurta999
+[22:22:04]   (c) 2018 - 2020 IllidanS4
+[22:22:04]  Server version: 0.3.DL R1, Windows
+[22:22:04]  ==============================================
+[22:22:04] 
+[22:22:04]   Loaded.
+[22:22:04]  Loading plugin: sscanf.dll
+[22:22:04] 
+[22:22:04]  ===============================
+[22:22:04] 
+[22:22:04]       sscanf plugin loaded.     
+[22:22:04] 
+[22:22:04]          Version: 2.13.8
+[22:22:04] 
+[22:22:04]    (c) 2022 Alex "Y_Less" Cole  
+[22:22:04] 
+[22:22:04]  ===============================
+[22:22:04] 
+[22:22:04]   Loaded.
+[22:22:04]  Loading plugin: TDE.dll
+[22:22:04] 
+TDEditor Plugin loaded, thank you for using.
+
+[22:22:04]   Loaded.
+[22:22:04]  Loaded 3 plugins.
+
+[22:22:04] [artwork:crc] blank.dff CRC = 0xA08847A4
+[22:22:04] [artwork:crc] account.txd CRC = 0x195A764A
+[22:22:05] 
+[22:22:05] Filterscripts
+[22:22:05] ---------------
+[22:22:05]   Loading filterscript 'TDE.amx'...
+[22:22:05]  
+[22:22:05]  
+[22:22:05]  
+[22:22:05]  
+[22:22:05] ___ __  __
+[22:22:05]  | |  \|_  _|.|_ _  _		
+[22:22:05]  | |__/|__(_|||_(_)|			
+[22:22:05]  
+[22:22:05] TDEditor V1.18 by adri1
+[22:22:05] TDEditor loaded
+[22:22:05]  
+[22:22:05]   Loaded 1 filterscripts.
+
+[22:22:05] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[22:22:05] 
+----------------------------------
+[22:22:05]   Bare Script
+
+[22:22:05] ----------------------------------
+
+[22:22:05] Number of vehicle models: 0
+[22:22:28] [connection] incoming connection: 127.0.0.1:62544 id: 0
+[22:22:28] [join] mynickname has joined the server (0:127.0.0.1)
+[22:29:08] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[22:29:14] 
+[22:29:14] Server Plugins
+[22:29:14] --------------
+[22:29:14]  Loading plugin: YSF_DL.dll
+[22:29:14] 
+[22:29:14]  ==============================================
+[22:29:14]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[22:29:14]   (c) 2008 Alex "Y_Less" Cole
+[22:29:14]   (c) 2010 - 2018 kurta999
+[22:29:14]   (c) 2018 - 2020 IllidanS4
+[22:29:14]  Server version: 0.3.DL R1, Windows
+[22:29:14]  ==============================================
+[22:29:14] 
+[22:29:14]   Loaded.
+[22:29:14]  Loading plugin: sscanf.dll
+[22:29:14] 
+[22:29:14]  ===============================
+[22:29:14] 
+[22:29:14]       sscanf plugin loaded.     
+[22:29:14] 
+[22:29:14]          Version: 2.13.8
+[22:29:14] 
+[22:29:14]    (c) 2022 Alex "Y_Less" Cole  
+[22:29:14] 
+[22:29:14]  ===============================
+[22:29:14] 
+[22:29:14]   Loaded.
+[22:29:14]  Loading plugin: TDE.dll
+[22:29:14] 
+TDEditor Plugin loaded, thank you for using.
+
+[22:29:14]   Loaded.
+[22:29:14]  Loaded 3 plugins.
+
+[22:29:14] [artwork:crc] blank.dff CRC = 0xA08847A4
+[22:29:14] [artwork:crc] account.txd CRC = 0x195A764A
+[22:29:15] 
+[22:29:15] Filterscripts
+[22:29:15] ---------------
+[22:29:15]   Loading filterscript 'TDE.amx'...
+[22:29:15]  
+[22:29:15]  
+[22:29:15]  
+[22:29:15]  
+[22:29:15] ___ __  __
+[22:29:15]  | |  \|_  _|.|_ _  _		
+[22:29:15]  | |__/|__(_|||_(_)|			
+[22:29:15]  
+[22:29:15] TDEditor V1.18 by adri1
+[22:29:15] TDEditor loaded
+[22:29:15]  
+[22:29:15]   Loaded 1 filterscripts.
+
+[22:29:15] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[22:29:15] 
+----------------------------------
+[22:29:15]   Bare Script
+
+[22:29:15] ----------------------------------
+
+[22:29:15] Number of vehicle models: 0
+[22:29:36] [connection] incoming connection: 127.0.0.1:57468 id: 0
+[22:29:36] [join] mynickname has joined the server (0:127.0.0.1)
+[22:31:33] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[14:46:15] 
+[14:46:15] Server Plugins
+[14:46:15] --------------
+[14:46:15]  Loading plugin: YSF_DL.dll
+[14:46:15] 
+[14:46:15]  ==============================================
+[14:46:15]  YSF 2.2 (compiled Sep 19 2021 13:02:34) loaded
+[14:46:15]   (c) 2008 Alex "Y_Less" Cole
+[14:46:15]   (c) 2010 - 2018 kurta999
+[14:46:15]   (c) 2018 - 2020 IllidanS4
+[14:46:15]  Server version: 0.3.DL R1, Windows
+[14:46:15]  ==============================================
+[14:46:15] 
+[14:46:15]   Loaded.
+[14:46:15]  Loading plugin: sscanf.dll
+[14:46:16] 
+[14:46:16]  ===============================
+[14:46:16] 
+[14:46:16]       sscanf plugin loaded.     
+[14:46:16] 
+[14:46:16]          Version: 2.13.8
+[14:46:16] 
+[14:46:16]    (c) 2022 Alex "Y_Less" Cole  
+[14:46:16] 
+[14:46:16]  ===============================
+[14:46:16] 
+[14:46:16]   Loaded.
+[14:46:16]  Loading plugin: TDE.dll
+[14:46:16] 
+TDEditor Plugin loaded, thank you for using.
+
+[14:46:16]   Loaded.
+[14:46:16]  Loaded 3 plugins.
+
+[14:46:16] [artwork:crc] blank.dff CRC = 0xA08847A4
+[14:46:16] [artwork:crc] account.txd CRC = 0xD09B0B16
+[14:46:16] 
+[14:46:16] Filterscripts
+[14:46:16] ---------------
+[14:46:16]   Loading filterscript 'TDE.amx'...
+[14:46:16]  
+[14:46:16]  
+[14:46:16]  
+[14:46:16]  
+[14:46:16] ___ __  __
+[14:46:16]  | |  \|_  _|.|_ _  _		
+[14:46:16]  | |__/|__(_|||_(_)|			
+[14:46:16]  
+[14:46:16] TDEditor V1.18 by adri1
+[14:46:16] TDEditor loaded
+[14:46:16]  
+[14:46:16]   Loaded 1 filterscripts.
+
+[14:46:16] AllowAdminTeleport() : function is deprecated. Please see OnPlayerClickMap()
+[14:46:16] 
+----------------------------------
+[14:46:16]   Bare Script
+
+[14:46:16] ----------------------------------
+
+[14:46:16] Number of vehicle models: 0
+[14:46:42] [connection] incoming connection: 127.0.0.1:61277 id: 0
+[14:46:42] [join] mynickname has joined the server (0:127.0.0.1)
+[14:46:50] [part] mynickname has left the server (0:1)
+[14:48:54] [connection] incoming connection: 127.0.0.1:51034 id: 0
+[14:48:55] [join] mynickname has joined the server (0:127.0.0.1)
+[14:58:04] [part] mynickname has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[11:55:24] filterscripts = ""  (string)
+[11:55:24] 
+[11:55:24] Server Plugins
+[11:55:24] --------------
+[11:55:24]  Loaded 0 plugins.
+
+[11:55:24] 
+[11:55:24] Filterscripts
+[11:55:24] ---------------
+[11:55:24]   Loaded 0 filterscripts.
+
+[11:55:24] [COASTGUARD] Bote creado ID=1 modelo=472
+[11:55:24] ════════════════════════════════════════
+[11:55:24]  Coastguard Test Server - Listo!
+[11:55:24]  Bote en: 719.12, -1698.42, 1.78
+[11:55:24]  52 checkpoints EXACTOS del servidor real
+[11:55:24]  Apretar 2 en el bote para empezar
+[11:55:24] ════════════════════════════════════════
+[11:55:24] Script[gamemodes/coastguard_test.amx]: Run time error 20: "Invalid index parameter (bad entry point)"
+[11:55:24] Number of vehicle models: 1
+[11:56:11] [connection] incoming connection: 127.0.0.1:52259 id: 0
+[11:56:11] [join] Holas has joined the server (0:127.0.0.1)
+[11:57:11] [part] Holas has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[12:00:21] filterscripts = ""  (string)
+[12:00:21] 
+[12:00:21] Server Plugins
+[12:00:21] --------------
+[12:00:21]  Loaded 0 plugins.
+
+[12:00:21] 
+[12:00:21] Filterscripts
+[12:00:21] ---------------
+[12:00:21]   Loaded 0 filterscripts.
+
+[12:00:21] [COASTGUARD] Bote creado ID=1 modelo=472
+[12:00:21] ════════════════════════════════════════
+[12:00:21]  Coastguard Test Server - Listo!
+[12:00:21]  Bote en: 719.12, -1698.42, 1.78
+[12:00:21]  52 checkpoints EXACTOS del servidor real
+[12:00:21]  Apretar 2 en el bote para empezar
+[12:00:21] ════════════════════════════════════════
+[12:00:21] Script[gamemodes/coastguard_test.amx]: Run time error 20: "Invalid index parameter (bad entry point)"
+[12:00:21] Number of vehicle models: 1
+[12:00:40] [connection] incoming connection: 127.0.0.1:54485 id: 0
+[12:00:40] [join] Holas has joined the server (0:127.0.0.1)
+[12:01:10] [part] Holas has left the server (0:1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[12:03:20] filterscripts = ""  (string)
+[12:03:20] 
+[12:03:20] Server Plugins
+[12:03:20] --------------
+[12:03:20]  Loaded 0 plugins.
+
+[12:03:20] 
+[12:03:20] Filterscripts
+[12:03:20] ---------------
+[12:03:20]   Loaded 0 filterscripts.
+
+[12:03:20] [COASTGUARD] Bote creado ID=1 modelo=472
+[12:03:20] ════════════════════════════════════════
+[12:03:20]  Coastguard Test Server - Listo!
+[12:03:20]  Bote en: 719.12, -1698.42, 1.78
+[12:03:20]  52 checkpoints EXACTOS del servidor real
+[12:03:20]  Apretar 2 en el bote para empezar
+[12:03:20] ════════════════════════════════════════
+[12:03:20] Script[gamemodes/coastguard_test.amx]: Run time error 20: "Invalid index parameter (bad entry point)"
+[12:03:20] Number of vehicle models: 1
+[12:03:38] [connection] incoming connection: 127.0.0.1:51550 id: 0
+[12:03:38] [join] Holas has joined the server (0:127.0.0.1)
+[12:03:58] [part] Holas has left the server (0:1)
+[12:05:31] [connection] incoming connection: 127.0.0.1:52681 id: 0
+[12:05:31] [join] Holas has joined the server (0:127.0.0.1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[12:09:57] filterscripts = ""  (string)
+[12:09:57] 
+[12:09:57] Server Plugins
+[12:09:57] --------------
+[12:09:57]  Loaded 0 plugins.
+
+[12:09:58] 
+[12:09:58] Filterscripts
+[12:09:58] ---------------
+[12:09:58]   Loaded 0 filterscripts.
+
+[12:09:58] [COASTGUARD] Bote creado ID=1 modelo=472
+[12:09:58] ════════════════════════════════════════
+[12:09:58]  Coastguard Test Server - Listo!
+[12:09:58]  Bote en: 719.12, -1698.42, 1.78
+[12:09:58]  52 checkpoints EXACTOS del servidor real
+[12:09:58]  Apretar 2 en el bote para empezar
+[12:09:58] ════════════════════════════════════════
+[12:09:58] Script[gamemodes/coastguard_test.amx]: Run time error 20: "Invalid index parameter (bad entry point)"
+[12:09:58] Number of vehicle models: 1
+[12:10:21] [connection] incoming connection: 127.0.0.1:63923 id: 0
+[12:10:21] [join] Holas has joined the server (0:127.0.0.1)
