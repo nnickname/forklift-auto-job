@@ -31,7 +31,7 @@ namespace Coastguard {
         RESTARTING
     };
 
-    static constexpr WORD  BOAT_SAMP_ID = 1;
+    static constexpr WORD  BOAT_SAMP_ID = 40;
     static constexpr float BOAT_X       = 719.1288f;
     static constexpr float BOAT_Y       = -1698.4248f;
     static constexpr float BOAT_Z       = 1.7874f;
@@ -298,10 +298,22 @@ namespace Coastguard {
             s_SamePosRetry = 0;
 
             if (s_RouteKnown && s_RouteSize > 0) {
-                s_TurboIdx = 0;
+                // Match current CP to cached route so we start at the right index
+                int startIdx = 0;
+                Vec3 cpNow; bool raceNow;
+                if (PollCheckpoint(cpNow, raceNow)) {
+                    for (int i = 0; i < s_RouteSize; i++) {
+                        if (!IsDifferent(cpNow, s_Route[i])) {
+                            startIdx = i;
+                            break;
+                        }
+                    }
+                }
+                s_TurboIdx = startIdx;
                 s_TpSub = 0;
+                s_TurboRetries = 0;
                 s_State = State::TURBO;
-                Game::Log("[CG] TURBO #%d (%d CPs)", s_Cycle, s_RouteSize);
+                Game::Log("[CG] TURBO #%d (%d CPs) start@%d", s_Cycle, s_RouteSize, startIdx);
             } else {
                 s_RouteSize = 0;
                 s_State = State::WAITING_CP;
@@ -519,22 +531,22 @@ namespace Coastguard {
                     break;
                 }
 
-                // Same CP still there — re-teleport, but with a hard bail limit
-                s_TurboRetries++;
-                if (s_TurboRetries >= 5) {
-                    // 5 re-TPs and server still hasn't accepted → bail
-                    Game::Log("[CG] TURBO bail retries [%d] → CycleReset", s_TurboIdx);
-                    s_TurboRetries = 0;
-                    s_RouteKnown = (s_RouteSize > 0);
-                    CycleReset("TURBO stuck on last CP");
-                    break;
-                }
+                // Same CP still there — re-teleport at TURBO_RESYNC intervals
+                // IMPORTANT: only increment retries on actual re-TP, NOT every tick
                 if (elapsed >= TURBO_RESYNC) {
+                    s_TurboRetries++;
+                    if (s_TurboRetries >= 5) {
+                        // 5 re-TPs and server still hasn't accepted → bail
+                        Game::Log("[CG] TURBO bail retries [%d] try %d → CycleReset", s_TurboIdx, s_TurboRetries);
+                        s_TurboRetries = 0;
+                        s_RouteKnown = (s_RouteSize > 0);
+                        CycleReset("TURBO stuck on last CP");
+                        break;
+                    }
                     if (vid != 0xFFFF)
                         SAMP::TeleportVehicle(vid, cp.x, cp.y, cp.z);
                     Game::Log("[CG] TURBO re-tp [%d] try %d", s_TurboIdx, s_TurboRetries);
                     s_StateTime = now;
-                    break;
                 }
             }
             break;
@@ -686,6 +698,31 @@ namespace Coastguard {
                 // Release key after hold duration
                 if (s_KeyHeld && (now - s_LastKeyPress) >= KEY2_HOLD) {
                     ReleaseKey2();
+                }
+
+                // After several failed key2 attempts, if stale CP matches
+                // a cached route, the server still has the job running.
+                // Resume TURBO directly instead of pressing "2" forever.
+                if (s_Key2Attempts >= 3 && s_RouteKnown && s_RouteSize > 0) {
+                    Vec3 cpResume; bool raceResume;
+                    if (PollCheckpoint(cpResume, raceResume)) {
+                        for (int i = 0; i < s_RouteSize; i++) {
+                            if (!IsDifferent(cpResume, s_Route[i])) {
+                                Game::Log("[CG] R:3 stale CP matches Route[%d] → resume TURBO", i);
+                                s_TurboIdx = i;
+                                s_TpSub = 0;
+                                s_TurboRetries = 0;
+                                s_CPCount = 0;
+                                s_Cycle++;
+                                s_PreKey2Snap = false;
+                                s_RestartStep = 0;
+                                s_State = State::TURBO;
+                                s_StateTime = now;
+                                Game::Log("[CG] TURBO #%d (%d CPs) start@%d", s_Cycle, s_RouteSize, i);
+                                return;
+                            }
+                        }
+                    }
                 }
 
                 // Press "2": first time or after KEY2_WAIT since last
