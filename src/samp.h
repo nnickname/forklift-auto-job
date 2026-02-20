@@ -245,11 +245,8 @@ namespace SAMP {
             }
         } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 
-        auto* cg = GetCGame();
-        if (cg) {
-            __try { cg->RefreshRenderer(x, y); }
-            __except (EXCEPTION_EXECUTE_HANDLER) {}
-        }
+        // NOTE: No RefreshRenderer here — calling it 50+ times
+        // in quick succession breaks the camera.
         return true;
     }
 

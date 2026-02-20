@@ -88,6 +88,8 @@ namespace Coastguard {
     static int   s_Key2Attempts = 0;
     static DWORD s_LastKeyPress = 0;
     static bool  s_KeyHeld      = false;
+    static Vec3  s_PreKey2CP    = {0, 0, 0}; // CP that existed BEFORE pressing "2"
+    static bool  s_PreKey2Snap  = false;      // have we taken the snapshot?
 
     // Teleport sub-step
     static int   s_TpSub = 0;
@@ -167,6 +169,7 @@ namespace Coastguard {
         s_SamePosRetry = 0;
         s_Key2Attempts = 0;
         s_LastKeyPress = 0;
+        s_PreKey2Snap = false;
         s_TpSub = 0;
     }
 
@@ -572,6 +575,7 @@ namespace Coastguard {
                     // SA-MP syncs automatically via CLocalPlayer::Process()
                     s_Key2Attempts = 0;
                     s_LastKeyPress = 0;
+                    s_PreKey2Snap = false;
                     s_TpSub = 0;
                     s_RestartStep = 3;
                     s_StateTime = now;
@@ -581,7 +585,7 @@ namespace Coastguard {
                 break;
             }
 
-            case 3: // Press "2" + wait for CP
+            case 3: // Press "2" + wait for NEW CP
             {
                 if (elapsed < ENTER_SETTLE) break;
 
@@ -590,6 +594,18 @@ namespace Coastguard {
                     s_RestartStep = 0;
                     s_StateTime = now;
                     break;
+                }
+
+                // Snapshot current CP state BEFORE first key press
+                if (!s_PreKey2Snap) {
+                    Vec3 cp; bool race;
+                    if (PollCheckpoint(cp, race)) {
+                        s_PreKey2CP = cp;
+                        Game::Log("[CG] R:3 stale CP (%.0f,%.0f,%.0f)", cp.x, cp.y, cp.z);
+                    } else {
+                        s_PreKey2CP = {0, 0, 0};
+                    }
+                    s_PreKey2Snap = true;
                 }
 
                 // Release key after hold duration
@@ -608,12 +624,13 @@ namespace Coastguard {
                     break;
                 }
 
-                // Check if CP appeared (only after key released)
+                // Check if a NEW/DIFFERENT CP appeared (not the stale one)
                 if (!s_KeyHeld) {
                     Vec3 cp; bool race;
-                    if (PollCheckpoint(cp, race)) {
-                        Game::Log("[CG] R:3 CP! → IDLE (#%d)", s_Key2Attempts);
+                    if (PollCheckpoint(cp, race) && IsDifferent(cp, s_PreKey2CP)) {
+                        Game::Log("[CG] R:3 NEW CP! → IDLE (#%d) (%.0f,%.0f,%.0f)", s_Key2Attempts, cp.x, cp.y, cp.z);
                         s_RestartStep = 0;
+                        s_PreKey2Snap = false;
                         s_State = State::IDLE;
                         s_StateTime = now;
                         break;
