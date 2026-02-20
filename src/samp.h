@@ -22,6 +22,7 @@
 #include "sampapi/0.3.DL-1/CPed.h"
 #include "sampapi/0.3.DL-1/CVehicle.h"
 #include "sampapi/0.3.DL-1/CEntity.h"
+#include "sampapi/0.3.DL-1/CDialog.h"
 #include "sampapi/0.3.DL-1/Synchronization.h"
 
 namespace sapi = sampapi::v03dl;
@@ -428,5 +429,135 @@ namespace SAMP {
         __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
 
         return true;
+    }
+
+    // ════════════════════════════════════════════════════════
+    // DIALOG — CDialog accessors + response
+    // ════════════════════════════════════════════════════════
+
+    inline sapi::CDialog* GetDialog() {
+        __try { return sapi::RefDialog(); }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return nullptr; }
+    }
+
+    inline bool IsDialogActive() {
+        auto* dlg = GetDialog();
+        if (!dlg) return false;
+        __try { return dlg->m_bIsActive != 0; }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+    }
+
+    inline int GetDialogID() {
+        auto* dlg = GetDialog();
+        if (!dlg) return -1;
+        __try { return dlg->m_nId; }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return -1; }
+    }
+
+    inline int GetDialogType() {
+        auto* dlg = GetDialog();
+        if (!dlg) return -1;
+        __try { return dlg->m_nType; }
+        __except (EXCEPTION_EXECUTE_HANDLER) { return -1; }
+    }
+
+    inline bool GetDialogCaption(char* out, int maxLen) {
+        auto* dlg = GetDialog();
+        if (!dlg) return false;
+        __try {
+            strncpy(out, dlg->m_szCaption, maxLen - 1);
+            out[maxLen - 1] = '\0';
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+    }
+
+    inline bool GetDialogText(char* out, int maxLen) {
+        auto* dlg = GetDialog();
+        if (!dlg) return false;
+        __try {
+            if (dlg->m_szText) {
+                strncpy(out, dlg->m_szText, maxLen - 1);
+                out[maxLen - 1] = '\0';
+                return true;
+            }
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        return false;
+    }
+
+    // Set the editbox text for INPUT/PASSWORD dialogs.
+    // CDXUTIMEEditBox stores text in a wide char buffer (CUniBuffer).
+    // SA-MP's Close() reads it and converts to ANSI for the RPC.
+    // We write to the editbox by calling its SetText method (vtable index 24).
+    // Fallback: directly write to the char buffer at known offsets.
+    inline bool SetDialogInputText(const char* text) {
+        auto* dlg = GetDialog();
+        if (!dlg) return false;
+        __try {
+            auto* editbox = dlg->m_pEditbox;
+            if (!editbox) return false;
+
+            // CDXUTIMEEditBox in SA-MP 0.3.DL stores ANSI text.
+            // The internal buffer for ANSI text is at offset 0xCC
+            // from the editbox base (after DXUT control members).
+            // Buffer pointer at +0xCC, max size at +0xD0
+            DWORD ebAddr = (DWORD)editbox;
+
+            // Method 1: Try writing via DXUT's internal ANSI path
+            // SA-MP editbox has a char buffer at offset 0x7C (varies by version)
+            // We'll try multiple known offsets
+
+            // In SA-MP 0.3.DL, CDXUTIMEEditBox:
+            //   +0x4C: CDXUTElement m_Elements[9] (DXUT theming)
+            //   After that: text buffer members
+            // Most reliable: write to the m_Buffer.m_pwszBuffer (CUniBuffer)
+            // CUniBuffer at offset ~0xD0 in CDXUTEditBox
+            // CUniBuffer has: int m_nBufferSize (+0x0), WCHAR* m_pwszBuffer (+0x4) 
+
+            // For SA-MP 0.3.DL, the edit box text pointer is at offset 0x10C
+            // from editbox start. This is the CUniBuffer's WCHAR* buffer.
+
+            // Safest approach: use SetText2 if available, or write directly
+            // SA-MP CDXUTIMEEditBox::SetText is at vtable index ~24 for ANSI
+            // It takes (LPCWSTR pszText, bool bSelected)
+
+            // Actually, simplest approach: use the WCHAR buffer
+            // CUniBuffer at editbox+0x108, WCHAR* at +0x04 within CUniBuffer
+            DWORD cuniAddr = ebAddr + 0x108;
+            int bufSize = *(int*)(cuniAddr);  // m_nBufferSize
+            WCHAR* wbuf = *(WCHAR**)(cuniAddr + 0x04); // m_pwszBuffer
+
+            if (wbuf && bufSize > 0) {
+                int len = (int)strlen(text);
+                if (len >= bufSize) len = bufSize - 1;
+                for (int i = 0; i < len; i++)
+                    wbuf[i] = (WCHAR)(unsigned char)text[i];
+                wbuf[len] = L'\0';
+                // Update text length at CUniBuffer offset +0x08
+                *(int*)(cuniAddr + 0x08) = len;
+                return true;
+            }
+        } __except (EXCEPTION_EXECUTE_HANDLER) {}
+        return false;
+    }
+
+    // Close dialog with button press (1=Accept, 0=Cancel)
+    // This internally reads editbox text and sends DialogResponse RPC.
+    inline bool CloseDialog(int button) {
+        auto* dlg = GetDialog();
+        if (!dlg) return false;
+        __try {
+            dlg->Close((char)button);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
+    }
+
+    // Hide dialog without sending response
+    inline bool HideDialog() {
+        auto* dlg = GetDialog();
+        if (!dlg) return false;
+        __try {
+            dlg->Hide();
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) { return false; }
     }
 }

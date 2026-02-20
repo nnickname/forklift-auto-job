@@ -1,10 +1,12 @@
 // ═══════════════════════════════════════════════════════════
 // Coastguard Test Gamemode — servidor local para testear el mod
 //
+// - Login flow: email → password → character select → welcome
 // - Bote modelo 472 en (719.12, -1698.42, 1.78)
 // - Al entrar al bote, apretar "2" para empezar
 // - 52 checkpoints EXACTOS del servidor real
 // - Al terminar: $3,500 + te saca del vehiculo + spawn al lado del bote
+// - /admins simula formato real, /fakeadmin toggle admin simulado
 // ═══════════════════════════════════════════════════════════
 
 #include <a_samp>
@@ -21,11 +23,21 @@
 #define REWARD          3500
 #define NUM_CPS         52
 
+// ─── Dialog IDs (login flow) ───
+#define DIALOG_EMAIL      100
+#define DIALOG_PASSWORD   101
+#define DIALOG_CHARACTER  102
+#define DIALOG_WELCOME    103
+
 // ─── Variables globales ───
 new gBoatID = INVALID_VEHICLE_ID;
 new bool:gJobActive[MAX_PLAYERS];
 new gCurrentCP[MAX_PLAYERS];
 new bool:gWaitingForKey2[MAX_PLAYERS];
+
+// ─── Login state ───
+new bool:gLoggedIn[MAX_PLAYERS];
+new bool:gFakeAdminOnline = false;    // toggle con /fakeadmin
 
 // ─── 52 Checkpoints EXACTOS del servidor real ───
 new Float:gCheckpoints[NUM_CPS][3] = {
@@ -128,10 +140,13 @@ public OnPlayerConnect(playerid)
     gJobActive[playerid] = false;
     gCurrentCP[playerid] = 0;
     gWaitingForKey2[playerid] = false;
+    gLoggedIn[playerid] = false;
 
-    SendClientMessage(playerid, 0x00FF00FF, "═══ COASTGUARD TEST SERVER ═══");
-    SendClientMessage(playerid, 0xFFFFFFFF, "Subite al bote y apreta 2 para empezar el trabajo.");
-    SendClientMessage(playerid, 0xFFFFFFFF, "Usa /tp para ir al bote, /restart para reiniciar el job.");
+    // ─── Start login flow: email dialog ───
+    ShowPlayerDialog(playerid, DIALOG_EMAIL, DIALOG_STYLE_INPUT,
+        "Ingrese su Email",
+        "Por favor ingresa tu correo electrónico para continuar.\n\nEscribe tu email:",
+        "Aceptar", "Cancelar");
     return 1;
 }
 
@@ -143,6 +158,15 @@ public OnPlayerDisconnect(playerid, reason)
 
 public OnPlayerSpawn(playerid)
 {
+    if(!gLoggedIn[playerid])
+    {
+        // Not logged in yet — re-show email dialog
+        ShowPlayerDialog(playerid, DIALOG_EMAIL, DIALOG_STYLE_INPUT,
+            "Ingrese su Email",
+            "Por favor ingresa tu correo electrónico para continuar.\n\nEscribe tu email:",
+            "Aceptar", "Cancelar");
+        return 1;
+    }
     // Dar plata inicial
     GivePlayerMoney(playerid, 10000);
     // Teletransportar al spawn cerca del bote
@@ -151,6 +175,103 @@ public OnPlayerSpawn(playerid)
     SetCameraBehindPlayer(playerid);
     SendClientMessage(playerid, 0xFFFF00FF, "Spawneaste al lado del bote. Subite y apreta 2!");
     return 1;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Dialog Response — Login flow chain
+//
+// Flow: Email(100) → Password(101) → CharSelect(102) → Welcome(103)
+// ═══════════════════════════════════════════════════════════
+
+public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
+{
+    switch(dialogid)
+    {
+        case DIALOG_EMAIL:
+        {
+            if(!response)
+            {
+                // Pressed Cancel — re-show
+                ShowPlayerDialog(playerid, DIALOG_EMAIL, DIALOG_STYLE_INPUT,
+                    "Ingrese su Email",
+                    "{FF0000}Debes ingresar tu email para jugar.\n\n{FFFFFF}Escribe tu email:",
+                    "Aceptar", "Cancelar");
+                return 1;
+            }
+            // Accept email — show password dialog
+            new msg[128];
+            format(msg, sizeof(msg), "[LOGIN] Email recibido: %s", inputtext);
+            printf("%s", msg);
+            SendClientMessage(playerid, 0x00FFFFFF, msg);
+
+            ShowPlayerDialog(playerid, DIALOG_PASSWORD, DIALOG_STYLE_PASSWORD,
+                "Contraseña",
+                "Ingresa tu contraseña para acceder a tu cuenta:",
+                "Iniciar sesion", "Cancelar");
+            return 1;
+        }
+
+        case DIALOG_PASSWORD:
+        {
+            if(!response)
+            {
+                // Cancel — back to email
+                ShowPlayerDialog(playerid, DIALOG_EMAIL, DIALOG_STYLE_INPUT,
+                    "Ingrese su Email",
+                    "Por favor ingresa tu correo electrónico para continuar.\n\nEscribe tu email:",
+                    "Aceptar", "Cancelar");
+                return 1;
+            }
+            // Accept password — show character select
+            printf("[LOGIN] Password recibido (len=%d)", strlen(inputtext));
+            SendClientMessage(playerid, 0x00FFFFFF, "[LOGIN] Contraseña aceptada.");
+
+            ShowPlayerDialog(playerid, DIALOG_CHARACTER, DIALOG_STYLE_LIST,
+                "Seleccionar Personaje",
+                "Xylos Fernandez - Nivel 15\nPersonaje 2 - Vacio\nPersonaje 3 - Vacio",
+                "Seleccionar", "Volver");
+            return 1;
+        }
+
+        case DIALOG_CHARACTER:
+        {
+            if(!response)
+            {
+                // Cancel — back to password
+                ShowPlayerDialog(playerid, DIALOG_PASSWORD, DIALOG_STYLE_PASSWORD,
+                    "Contraseña",
+                    "Ingresa tu contraseña para acceder a tu cuenta:",
+                    "Iniciar sesion", "Cancelar");
+                return 1;
+            }
+            // Selected character — show welcome message
+            new msg[64];
+            format(msg, sizeof(msg), "[LOGIN] Personaje seleccionado: slot %d", listitem);
+            printf("%s", msg);
+            SendClientMessage(playerid, 0x00FFFFFF, msg);
+
+            ShowPlayerDialog(playerid, DIALOG_WELCOME, DIALOG_STYLE_MSGBOX,
+                "Bienvenido a SARP",
+                "{00FF00}¡Bienvenido de vuelta!\n\n{FFFFFF}Recuerda respetar las reglas del servidor.\nUsa /ayuda para ver los comandos disponibles.\n\n{FFFF00}¡Buena suerte!",
+                "Aceptar", "");
+            return 1;
+        }
+
+        case DIALOG_WELCOME:
+        {
+            // Login complete — mark as logged in and spawn
+            gLoggedIn[playerid] = true;
+            printf("[LOGIN] Jugador %d login completo — spawning", playerid);
+            SendClientMessage(playerid, 0x00FF00FF, "═══ COASTGUARD TEST SERVER ═══");
+            SendClientMessage(playerid, 0xFFFFFFFF, "Subite al bote y apreta 2 para empezar el trabajo.");
+            SendClientMessage(playerid, 0xFFFFFFFF, "Usa /tp para ir al bote, /restart para reiniciar el job.");
+            SendClientMessage(playerid, 0xFFFFFFFF, "Usa /fakeadmin para simular admin online.");
+
+            SpawnPlayer(playerid);
+            return 1;
+        }
+    }
+    return 0;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -396,10 +517,32 @@ public OnPlayerCommandText(playerid, cmdtext[])
         return 1;
     }
 
-    // /admins — respuesta fake para el admin check del mod
+    // /admins — simula formato REAL del servidor
+    // Real: solo manda el header cuando no hay admins (SIN "No hay administradores")
     if(!strcmp(cmdtext, "/admins", true))
     {
-        SendClientMessage(playerid, 0xFFFFFFFF, "No hay administradores en línea.");
+        SendClientMessage(playerid, 0xFFFFFFFF, "[ _______________ ADMINISTRADORES _______________ ]");
+        if(gFakeAdminOnline)
+        {
+            SendClientMessage(playerid, 0xFFFFFFFF, "(ID: 18) Lead Admin Zoom (reportes: 74) (dudas: 59)");
+            SendClientMessage(playerid, 0xFFFFFFFF, "(ID: 22) Helper BLK (dudas: 1)");
+        }
+        // Cuando no hay admins: solo el header, nada mas (como el servidor real)
+        return 1;
+    }
+
+    // /fakeadmin — toggle admin simulado
+    if(!strcmp(cmdtext, "/fakeadmin", true))
+    {
+        gFakeAdminOnline = !gFakeAdminOnline;
+        if(gFakeAdminOnline)
+        {
+            SendClientMessage(playerid, 0xFF0000FF, "[TEST] Admin simulado ONLINE — /admins mostrara admin");
+        }
+        else
+        {
+            SendClientMessage(playerid, 0x00FF00FF, "[TEST] Admin simulado OFFLINE — /admins mostrara vacio");
+        }
         return 1;
     }
 

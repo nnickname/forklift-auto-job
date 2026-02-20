@@ -1226,6 +1226,7 @@
 		<member name="C:true" value="1">
 			<tagname value="bool"/>
 			<referrer name="fflush"/>
+			<referrer name="OnDialogResponse"/>
 			<referrer name="OnPlayerStateChange"/>
 			<referrer name="StartCoastguardJob"/>
 			<referrer name="OnPlayerCommandText"/>
@@ -1369,6 +1370,10 @@
 			<referrer name="ResetPlayerJob"/>
 			<referrer name="OnPlayerCommandText"/>
 		</member>
+		<member name="F:gFakeAdminOnline">
+			<tagname value="bool"/>
+			<referrer name="OnPlayerCommandText"/>
+		</member>
 		<member name="F:gJobActive">
 			<tagname value="bool"/>
 			<referrer name="OnPlayerConnect"/>
@@ -1378,6 +1383,12 @@
 			<referrer name="FinishCoastguardJob"/>
 			<referrer name="ResetPlayerJob"/>
 			<referrer name="OnPlayerCommandText"/>
+		</member>
+		<member name="F:gLoggedIn">
+			<tagname value="bool"/>
+			<referrer name="OnPlayerConnect"/>
+			<referrer name="OnPlayerSpawn"/>
+			<referrer name="OnDialogResponse"/>
 		</member>
 		<member name="F:gWaitingForKey2">
 			<tagname value="bool"/>
@@ -2291,7 +2302,16 @@
 			<summary>This callback is called when a SendClientCheck request comletes</summary>          <seealso name="SendClientCheck" /> 
 		</member>
 		<member name="M:OnDialogResponse" syntax="OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])">
-			<stacksize value="1"/>
+			<attribute name="public"/>
+			<stacksize value="137"/>
+			<dependency name="SendClientMessage"/>
+			<dependency name="ShowPlayerDialog"/>
+			<dependency name="SpawnPlayer"/>
+			<dependency name="__printf"/>
+			<dependency name="format"/>
+			<dependency name="gLoggedIn"/>
+			<dependency name="strlen"/>
+			<dependency name="true"/>
 			<param name="playerid">
 				The ID of the player that responded to the dialog
 			</param>
@@ -2482,6 +2502,7 @@
 			<dependency name="gCheckpoints"/>
 			<dependency name="gCheckpoints"/>
 			<dependency name="gCurrentCP"/>
+			<dependency name="gFakeAdminOnline"/>
 			<dependency name="gJobActive"/>
 			<dependency name="gWaitingForKey2"/>
 			<dependency name="strcmp"/>
@@ -2497,11 +2518,12 @@
 		</member>
 		<member name="M:OnPlayerConnect" syntax="OnPlayerConnect(playerid)">
 			<attribute name="public"/>
-			<stacksize value="5"/>
-			<dependency name="SendClientMessage"/>
+			<stacksize value="9"/>
+			<dependency name="ShowPlayerDialog"/>
 			<dependency name="false"/>
 			<dependency name="gCurrentCP"/>
 			<dependency name="gJobActive"/>
+			<dependency name="gLoggedIn"/>
 			<dependency name="gWaitingForKey2"/>
 			<param name="playerid">
 				The ID of the player that connected
@@ -2931,12 +2953,14 @@
 		</member>
 		<member name="M:OnPlayerSpawn" syntax="OnPlayerSpawn(playerid)">
 			<attribute name="public"/>
-			<stacksize value="6"/>
+			<stacksize value="9"/>
 			<dependency name="GivePlayerMoney"/>
 			<dependency name="SendClientMessage"/>
 			<dependency name="SetCameraBehindPlayer"/>
 			<dependency name="SetPlayerFacingAngle"/>
 			<dependency name="SetPlayerPos"/>
+			<dependency name="ShowPlayerDialog"/>
+			<dependency name="gLoggedIn"/>
 			<param name="playerid">
 				The ID of the player that spawned
 			</param>
@@ -3305,8 +3329,8 @@
 		<member name="M:SendClientMessage" syntax="SendClientMessage(playerid, colour, format[], ...)">
 			<tagname value="bool"/>
 			<attribute name="native"/>
-			<referrer name="OnPlayerConnect"/>
 			<referrer name="OnPlayerSpawn"/>
+			<referrer name="OnDialogResponse"/>
 			<referrer name="OnPlayerStateChange"/>
 			<referrer name="OnPlayerEnterRaceCheckpoint"/>
 			<referrer name="StartCoastguardJob"/>
@@ -3539,6 +3563,43 @@
 			</param>
 			<library>omp_core</library>  <summary>Toggle the drawing of nametags, health bars and armor bars above players.</summary>    <seealso name="DisableNameTagLOS" />  <seealso name="ShowPlayerNameTagForPlayer" />  <seealso name="ShowPlayerMarkers" />  <remarks>This function can only be used in <a href="#OnGameModeInit">OnGameModeInit</a>.  For other  times, see <a href="#ShowPlayerNameTagForPlayer">ShowPlayerNameTagForPlayer</a>.</remarks> 
 		</member>
+		<member name="M:ShowPlayerDialog" syntax="ShowPlayerDialog(playerid, dialogid, style, title[], body[], button1[], button2[], ...)">
+			<tagname value="bool"/>
+			<attribute name="native"/>
+			<referrer name="OnPlayerConnect"/>
+			<referrer name="OnPlayerSpawn"/>
+			<referrer name="OnDialogResponse"/>
+			<param name="playerid">
+				The ID of the player to show the dialog to
+			</param>
+			<param name="dialogid">
+				An ID to assign this dialog to, so responses can be processed.  Max dialogid  is <b><c>32767</c></b>.  Using negative values will close any open dialog
+			</param>
+			<param name="style">
+				<paraminfo>t_DIALOG_STYLE </paraminfo>
+				The style of the dialog
+			</param>
+			<param name="title">
+				<paraminfo> [] </paraminfo>
+				The title at the top of the dialog.  The length of the title can not exceed  more than 64 characters before it starts to cut off
+			</param>
+			<param name="body">
+				<paraminfo> [] </paraminfo>
+				The text to display in the main dialog.  Use <b><c>\n</c></b> to start a new line  and <b><c>\t</c></b> to tabulate.  May be optionally formatted.
+			</param>
+			<param name="button1">
+				<paraminfo> [] </paraminfo>
+				The text on the left button
+			</param>
+			<param name="button2">
+				<paraminfo> [] </paraminfo>
+				The text on the right button.  Leave it blank ( "" ) to hide it
+			</param>
+			<param name="...">
+				<paraminfo> {LANDING_GEAR_STATE,Bit,Bitmap,XML,XMLEntry,Group,INI,Language,Style,DB,DBResult,Menu,Text,PlayerText,Text3D,PlayerText3D,File,Float,CUSTOM_TAG_TYPES,_} </paraminfo>
+			</param>
+			<library>omp_dialog</library>  <summary>Shows the player a synchronous (only one at a time) dialog box.</summary>                <seealso name="TextDrawShowForPlayer" />  <seealso name="OnDialogResponse" />  <remarks>Use colour embedding for multiple colours in the text. </remarks>  <remarks>Using <b><c>-1</c></b> as dialogid closes all dialogs currently shown on the client's screen.  </remarks>  <returns>  <b><c>1</c></b>: The function executed successfully.<br />  <b><c>0</c></b>: The function failed to execute.  This means the player is not connected.<br />  </returns> 
+		</member>
 		<member name="M:ShowPlayerMarkers" syntax="ShowPlayerMarkers(mode)">
 			<attribute name="native"/>
 			<referrer name="OnGameModeInit"/>
@@ -3547,6 +3608,15 @@
 				The mode to use for markers.  They can be streamed, meaning they are only visible  to nearby players.  See table below
 			</param>
 			<library>omp_core</library>  <summary>Toggles player markers (blips on the radar).  Must be used when the server starts (<a href="#OnGameModeInit">OnGameModeInit</a>).  For other times, see <a href="#SetPlayerMarkerForPlayer">SetPlayerMarkerForPlayer</a>.</summary>    <seealso name="SetPlayerMarkerForPlayer" />  <seealso name="LimitPlayerMarkerRadius" />  <seealso name="ShowNameTags" />  <seealso name="SetPlayerColor" />  <remarks>  <b>Marker modes:</b><br />  <ul>  <li><b><c>PLAYER_MARKERS_MODE_OFF</c></b> 0</li>  <li><b><c>PLAYER_MARKERS_MODE_GLOBAL</c></b> 1</li>  <li><b><c>PLAYER_MARKERS_MODE_STREAMED</c></b> 2</li>  </ul>  </remarks>  <remarks>It is also possible to set a player's colour to a colour that has full transparency (no  alpha value).  This makes it possible to show markers on a per-player basis.</remarks> 
+		</member>
+		<member name="M:SpawnPlayer" syntax="SpawnPlayer(playerid)">
+			<tagname value="bool"/>
+			<attribute name="native"/>
+			<referrer name="OnDialogResponse"/>
+			<param name="playerid">
+				The ID of the player to spawn
+			</param>
+			<library>omp_class</library>  <summary>(Re)Spawns a player.</summary>    <seealso name="SetSpawnInfo" />  <seealso name="AddPlayerClass" />  <seealso name="OnPlayerSpawn" />  <remarks>Kills the player if they are in a vehicle and then they spawn with a bottle in their hand.</remarks>  <returns>  <b><c>1</c></b>: The function executed successfully.<br />  <b><c>0</c></b>: The function failed to execute.  This means the player is not connected.  </returns> 
 		</member>
 		<member name="M:StartCoastguardJob" syntax="StartCoastguardJob(playerid)">
 			<attribute name="public"/>
@@ -3803,6 +3873,7 @@
 		<member name="M:__printf" syntax="__printf(format[], ...)">
 			<attribute name="native"/>
 			<referrer name="OnGameModeInit"/>
+			<referrer name="OnDialogResponse"/>
 			<referrer name="RespawnAfterJob"/>
 			<param name="format">
 				<paraminfo> [] </paraminfo>
@@ -4028,6 +4099,7 @@
 		</member>
 		<member name="M:format" syntax="format(output[], len, format[], ...)">
 			<attribute name="native"/>
+			<referrer name="OnDialogResponse"/>
 			<referrer name="OnPlayerEnterRaceCheckpoint"/>
 			<referrer name="FinishCoastguardJob"/>
 			<referrer name="OnPlayerCommandText"/>
@@ -4257,6 +4329,15 @@
 			<param name="__length">
 			</param>
 			<library>string</library>  <summary>Compares two strings to see if they are the same.</summary>  <param name="string1">The first string to compare</param>  <param name="string2">The second string to compare</param>  <param name="ignorecase">When set to true, the case doesn't matter - HeLLo is the same as Hello.  When false, they're not the same (optional=<b><c>0</c></b>)</param>  <param name="length">When this length is set, the first x chars will be compared - doing "Hello"  and "Hell No" with a length of 4 will say it's the same string (optional=<b><c>cellmax</c></b>)</param>  <seealso name="strcmp"/>  <remarks>This is a conveniece function that depends on <a href="#strcmp">strcmp</a>.</remarks>  <returns><b><c>true</c></b> if the strings match each other on given length, <b><c>false</c></b>  otherwise.</returns> 
+		</member>
+		<member name="M:strlen" syntax="strlen(string[])">
+			<attribute name="native"/>
+			<referrer name="OnDialogResponse"/>
+			<param name="string">
+				<paraminfo> [] </paraminfo>
+				The string to get the length of
+			</param>
+			<library>string</library>  <summary>Get the length of a string.</summary>    <seealso name="strcmp"/>  <seealso name="strfind"/>  <seealso name="strtok"/>  <seealso name="strdel"/>  <seealso name="strins"/>  <seealso name="strmid"/>  <seealso name="strpack"/>  <seealso name="strval"/>  <seealso name="strcat"/>  <returns>The length of the string as an integer.</returns> 
 		</member>
 		<member name="M:tickcount" syntax="tickcount(&amp;granularity)">
 			<attribute name="native"/>

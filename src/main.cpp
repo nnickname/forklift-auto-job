@@ -10,12 +10,15 @@
 #include "samp.h"
 #include "game.h"
 #include "coastguard.h"
+#include "autologin.h"
 
 // ════════════════════════════════════════════════════════════
 // Globals
 // ════════════════════════════════════════════════════════════
 static bool   g_ModActive = false;
 static bool   g_Running   = true;
+static bool   g_LoginNotified = false;   // one-shot: first admin check after login
+static bool   g_AdminCheckDone = false;  // true after at least ONE admin check completed
 static HANDLE g_Thread    = NULL;
 static HANDLE g_Watchdog  = NULL;
 
@@ -23,12 +26,24 @@ static HANDLE g_Watchdog  = NULL;
 // Admin Check — reads chatlog.txt size before/after /admins
 // If response has > 1 new line → admins online → block mod.
 // ════════════════════════════════════════════════════════════
+// Admin Check — reads chatlog after /admins and parses response.
+//
+// Real format:
+//   [ _______________ ADMINISTRADORES _______________ ]
+//   (ID: 18) Lead Admin Zoom (reportes: 74) (dudas: 59)
+//   (ID: 20) Game Moderator HoneyBooom! (...)
+//   (ID: 22) Helper BLK (dudas: 1)
+//
+// Logic:
+//   - Lines containing "Admin" or "Moderator" (but NOT "Helper") = real admins
+//   - If 0 real admins → safe to run
+//   - If any real admins → pause route, keep checking every minute
+// ════════════════════════════════════════════════════════════
 namespace AdminCheck {
     enum class Phase { IDLE, SNAPSHOT, SENDING, WAITING, EVALUATING };
 
-    static const DWORD WAIT_MS   = 1200;
-    static const DWORD PERIOD_MS = 60000;
-    static const int   SAFE_LINES = 5;
+    static const DWORD WAIT_MS   = 2000;
+    static const DWORD PERIOD_MS = 30000;
 
     static Phase s_Phase       = Phase::IDLE;
     static DWORD s_Timestamp   = 0;
@@ -36,6 +51,7 @@ namespace AdminCheck {
     static bool  s_Periodic    = false;
     static char  s_Path[MAX_PATH] = {};
     static DWORD s_PreSize     = 0;
+    static bool  s_AdminsOnline = false; // persistent state
 
     static bool FindChatlog() {
         if (s_Path[0]) return true;
@@ -62,26 +78,106 @@ namespace AdminCheck {
         return f.nFileSizeLow;
     }
 
-    static int CountNewLines() {
+    // Case-insensitive substring search
+    static bool StrContainsCI(const char* haystack, const char* needle) {
+        if (!haystack || !needle) return false;
+        int hLen = (int)strlen(haystack);
+        int nLen = (int)strlen(needle);
+        if (nLen > hLen) return false;
+        for (int i = 0; i <= hLen - nLen; i++) {
+            bool match = true;
+            for (int j = 0; j < nLen; j++) {
+                char a = haystack[i + j];
+                char b = needle[j];
+                if (a >= 'A' && a <= 'Z') a += 32;
+                if (b >= 'A' && b <= 'Z') b += 32;
+                if (a != b) { match = false; break; }
+            }
+            if (match) return true;
+        }
+        return false;
+    }
+
+    // Read new chatlog content and count REAL admin lines.
+    // Returns -1 if chatlog could not be read (treat as "unknown").
+    // Returns 0 if no admins, >0 if admins found.
+    static int CountRealAdmins() {
         DWORD sz = GetSize();
-        if (sz <= s_PreSize) return 0;
+        Game::Log("[ADMIN] Chatlog size: pre=%lu, now=%lu, path=%s", s_PreSize, sz, s_Path);
+
+        if (sz == 0 && s_PreSize == 0) {
+            Game::Log("[ADMIN] Chatlog not found or empty — assuming no admins");
+            return -1; // no chatlog
+        }
+        if (sz <= s_PreSize) {
+            Game::Log("[ADMIN] No new data in chatlog (sz=%lu <= pre=%lu)", sz, s_PreSize);
+            return -1; // no new data
+        }
+
         DWORD diff = sz - s_PreSize;
+        if (diff > 8192) diff = 8192; // cap read
+
         HANDLE h = CreateFileA(s_Path, GENERIC_READ,
             FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
-        if (h == INVALID_HANDLE_VALUE) return 0;
-        SetFilePointer(h, s_PreSize, NULL, FILE_BEGIN);
-        char buf[4096];
-        int lines = 0;
-        DWORD rem = diff;
-        while (rem > 0) {
-            DWORD toRead = (rem < sizeof(buf)) ? rem : (DWORD)sizeof(buf);
-            DWORD rd = 0;
-            if (!ReadFile(h, buf, toRead, &rd, NULL) || !rd) break;
-            for (DWORD i = 0; i < rd; i++) if (buf[i] == '\n') lines++;
-            rem -= rd;
+        if (h == INVALID_HANDLE_VALUE) {
+            Game::Log("[ADMIN] Cannot open chatlog!");
+            return -1;
         }
+        SetFilePointer(h, s_PreSize, NULL, FILE_BEGIN);
+
+        char buf[8192];
+        DWORD rd = 0;
+        ReadFile(h, buf, diff, &rd, NULL);
         CloseHandle(h);
-        return lines;
+        if (!rd) {
+            Game::Log("[ADMIN] ReadFile returned 0 bytes");
+            return -1;
+        }
+        buf[rd < sizeof(buf) ? rd : sizeof(buf) - 1] = '\0';
+        Game::Log("[ADMIN] Read %lu bytes from chatlog", rd);
+
+        // Log entire content for debugging
+        Game::Log("[ADMIN] Raw content: %.500s", buf);
+
+        int adminCount = 0;
+        bool gotResponse = false; // did we see ANY /admins response?
+
+        char* line = buf;
+        while (line && *line) {
+            char* nl = strchr(line, '\n');
+            if (nl) *nl = '\0';
+
+            // Skip empty/whitespace lines
+            if (strlen(line) < 3) {
+                if (nl) { line = nl + 1; continue; } else break;
+            }
+
+            // Detect /admins response (header or "no hay")
+            if (StrContainsCI(line, "ADMINISTRADORES") || StrContainsCI(line, "No hay administradores")) {
+                gotResponse = true;
+                Game::Log("[ADMIN] Response line: %s", line);
+            }
+            // Skip helper lines
+            else if (StrContainsCI(line, "Helper")) {
+                Game::Log("[ADMIN] Helper (skip): %s", line);
+            }
+            // Real admin: contains "Admin" or "Moderator" and "(ID:"
+            else if (StrContainsCI(line, "(ID:") &&
+                     (StrContainsCI(line, "Admin") || StrContainsCI(line, "Moderator"))) {
+                adminCount++;
+                gotResponse = true;
+                Game::Log("[ADMIN] *** ADMIN FOUND: %s", line);
+            }
+
+            if (nl) { line = nl + 1; } else { break; }
+        }
+
+        if (!gotResponse) {
+            Game::Log("[ADMIN] No /admins response detected in chatlog diff");
+            return -1;
+        }
+
+        return adminCount;
     }
 
     static void Begin(bool periodic) {
@@ -91,11 +187,12 @@ namespace AdminCheck {
 
     static bool IsChecking() { return s_Phase != Phase::IDLE; }
     static bool NeedsPeriodic() { return GetTickCount() - s_LastPeriodic >= PERIOD_MS; }
+    static bool AreAdminsOnline() { return s_AdminsOnline; }
 
-    // Returns true when finished. Sets adminsOnline + lineCount.
-    static bool Update(bool& adminsOnline, int& lineCount) {
-        adminsOnline = false;
-        lineCount = 0;
+    // Returns true when finished. Sets adminsOnline + adminCount.
+    static bool Update(bool& adminsOnline, int& adminCount) {
+        adminsOnline = s_AdminsOnline;
+        adminCount = 0;
         switch (s_Phase) {
         case Phase::IDLE:
             return false;
@@ -114,9 +211,17 @@ namespace AdminCheck {
                 s_Phase = Phase::EVALUATING;
             return false;
         case Phase::EVALUATING:
-            lineCount = CountNewLines();
-            adminsOnline = (lineCount > SAFE_LINES);
-            Game::Log("[ADMIN] %d lines → %s", lineCount, adminsOnline ? "ONLINE" : "offline");
+            adminCount = CountRealAdmins();
+            if (adminCount < 0) {
+                // Could not read chatlog or no response — assume no admins
+                Game::Log("[ADMIN] Chatlog read failed — assuming NO admins");
+                adminCount = 0;
+                s_AdminsOnline = false;
+            } else {
+                s_AdminsOnline = (adminCount > 0);
+            }
+            adminsOnline = s_AdminsOnline;
+            Game::Log("[ADMIN] Result: %d real admins → %s", adminCount, s_AdminsOnline ? "ONLINE" : "offline");
             s_Phase = Phase::IDLE;
             s_LastPeriodic = GetTickCount();
             return true;
@@ -149,17 +254,45 @@ static void CheckToggle() {
     }
     f6Was = f6Is;
 
+    // F7 = toggle auto-login
+    static bool f7Was = false;
+    bool f7Is = (GetAsyncKeyState(VK_F7) & 0x8000) != 0;
+    if (f7Is && !f7Was) {
+        if (!AutoLogin::IsActive()) {
+            AutoLogin::Start();
+            Beep(600, 100); Sleep(50); Beep(800, 100);
+            __try { Game::AddChatMessage(0xFF00FFFF, "[AutoLogin] {FFFFFF}Started — waiting for dialogs"); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        } else {
+            AutoLogin::Stop();
+            Beep(400, 100);
+            __try { Game::AddChatMessage(0xFFFF8800, "[AutoLogin] {FFFFFF}Stopped"); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+    }
+    f7Was = f7Is;
+
     static bool keyWas = false;
     bool keyIs = (GetAsyncKeyState(VK_F5) & 0x8000) != 0;
     if (keyIs && !keyWas) {
         if (!g_ModActive) {
-            // Start mod IMMEDIATELY — admin check runs in background
-            g_ModActive = true;
-            Coastguard::StartRestart();
-            AdminCheck::Begin(false);
-            Beep(1000, 150);
-            __try { Game::AddChatMessage(0xFF00FF00, "[Coastguard] {FFFFFF}Mod ON — F5 to disable"); }
-            __except (EXCEPTION_EXECUTE_HANDLER) {}
+            if (!g_AdminCheckDone) {
+                // No admin check done yet → run one now, don't activate
+                Beep(200, 100);
+                __try { Game::AddChatMessage(0xFFFFFF00, "[Coastguard] {FFFFFF}Checking admins first..."); }
+                __except (EXCEPTION_EXECUTE_HANDLER) {}
+                if (!AdminCheck::IsChecking()) AdminCheck::Begin(false);
+            } else if (AdminCheck::AreAdminsOnline()) {
+                Beep(200, 100);
+                __try { Game::AddChatMessage(0xFFFF0000, "[Coastguard] {FFFFFF}Blocked — admins online"); }
+                __except (EXCEPTION_EXECUTE_HANDLER) {}
+            } else {
+                g_ModActive = true;
+                Coastguard::StartRestart();
+                Beep(1000, 150);
+                __try { Game::AddChatMessage(0xFF00FF00, "[Coastguard] {FFFFFF}Mod ON — F5 to disable"); }
+                __except (EXCEPTION_EXECUTE_HANDLER) {}
+            }
         } else {
             Beep(400, 150);
             Deactivate("F5");
@@ -193,6 +326,12 @@ static DWORD WINAPI MainThread(LPVOID) {
                     sampOK = true;
                     Game::Log("[DETECT] SA-MP connected");
                     Beep(1200, 100); Sleep(50); Beep(1500, 100);
+
+                    // Auto-start login if not already active
+                    if (!AutoLogin::IsActive() && !AutoLogin::IsDone()) {
+                        AutoLogin::Start();
+                        Game::Log("[MAIN] AutoLogin auto-started on connect");
+                    }
                 }
             }
         } else if (!SAMP::IsConnected()) {
@@ -201,23 +340,65 @@ static DWORD WINAPI MainThread(LPVOID) {
             Game::Log("[DETECT] SA-MP disconnected");
         }
 
-        // ── Admin check processing (runs in background, never blocks coastguard) ──
+        // ── Admin check processing ──
+        // This processes the state machine for /admins command.
+        // When a check completes, it decides: start, pause, or keep waiting.
         if (sampOK && AdminCheck::IsChecking()) {
             __try {
-                bool admins = false; int lines = 0;
-                if (AdminCheck::Update(admins, lines) && admins && g_ModActive) {
-                    // Admins detected → emergency kill game
-                    Beep(200, 300); Sleep(100); Beep(200, 300);
-                    Deactivate("Admins detected");
-                    Game::Log("[MOD] Killing process — admins online");
-                    TerminateProcess(GetCurrentProcess(), 0);
+                bool admins = false; int count = 0;
+                if (AdminCheck::Update(admins, count)) {
+                    g_AdminCheckDone = true;
+                    Game::Log("[MAIN] Admin check done: admins=%d, modActive=%d, loginDone=%d",
+                        (int)admins, (int)g_ModActive, (int)AutoLogin::IsDone());
+
+                    if (admins && g_ModActive) {
+                        // Admins appeared while running → pause
+                        Beep(300, 200);
+                        Deactivate("Admins online — pausing");
+                        __try { Game::AddChatMessage(0xFFFF8800, "[Coastguard] {FFFFFF}Paused — admins online"); }
+                        __except (EXCEPTION_EXECUTE_HANDLER) {}
+                    }
+                    else if (!admins && !g_ModActive && AutoLogin::IsDone()) {
+                        // No admins + login done + mod not running → auto-start!
+                        g_ModActive = true;
+                        Coastguard::StartRestart();
+                        Beep(1000, 150);
+                        Game::Log("[MOD] Auto-started — no admins");
+                        __try { Game::AddChatMessage(0xFF00FF00, "[Coastguard] {FFFFFF}Auto-started — no admins"); }
+                        __except (EXCEPTION_EXECUTE_HANDLER) {}
+                    }
+                    else if (admins && !g_ModActive) {
+                        Game::Log("[MAIN] Admins online — waiting...");
+                    }
                 }
-            } __except (EXCEPTION_EXECUTE_HANDLER) {}
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                Game::Log("[MAIN] Exception in admin check");
+            }
         }
 
-        // Periodic admin recheck
-        if (g_ModActive && sampOK && !AdminCheck::IsChecking() && AdminCheck::NeedsPeriodic())
+        // Periodic admin recheck — ALWAYS when login done (running or waiting)
+        if (sampOK && AutoLogin::IsDone() && !AdminCheck::IsChecking() && AdminCheck::NeedsPeriodic()) {
+            Game::Log("[MAIN] Periodic admin recheck");
             AdminCheck::Begin(true);
+        }
+
+        // ── Auto-Login logic ──
+        if (sampOK && AutoLogin::IsActive()) {
+            __try {
+                AutoLogin::Update();
+            } __except (EXCEPTION_EXECUTE_HANDLER) {
+                Game::Log("[MAIN] Exception in autologin logic");
+            }
+        }
+
+        // ── One-shot: login just finished → trigger first admin check ──
+        if (sampOK && AutoLogin::IsDone() && !g_LoginNotified) {
+            g_LoginNotified = true;
+            __try { Game::AddChatMessage(0xFF00FF00, "[AutoLogin] {FFFFFF}Login complete! Checking admins..."); }
+            __except (EXCEPTION_EXECUTE_HANDLER) {}
+            AdminCheck::Begin(false);
+            Game::Log("[MAIN] AutoLogin done — first admin check started");
+        }
 
         // ── Coastguard logic (always tick — every state handles its own guards) ──
         if (g_ModActive && sampOK) {

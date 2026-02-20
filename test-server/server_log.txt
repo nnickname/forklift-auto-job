@@ -3603,3 +3603,97 @@ v0.3.DL-R1, (C)2005-2018 SA-MP Team
 [13:19:57] [part] Holas has left the server (0:0)
 [13:22:43] [connection] incoming connection: 127.0.0.1:54415 id: 0
 [13:22:43] [join] Holas has joined the server (0:127.0.0.1)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[15:41:02] filterscripts = ""  (string)
+[15:41:02] 
+[15:41:02] Server Plugins
+[15:41:02] --------------
+[15:41:02]  Loaded 0 plugins.
+
+[15:41:02] 
+[15:41:02] Filterscripts
+[15:41:02] ---------------
+[15:41:02]   Loaded 0 filterscripts.
+
+[15:41:02] [COASTGUARD] Bote creado ID=1 modelo=472
+[15:41:02] ════════════════════════════════════════
+[15:41:02]  Coastguard Test Server - Listo!
+[15:41:02]  Bote en: 719.12, -1698.42, 1.78
+[15:41:02]  52 checkpoints EXACTOS del servidor real
+[15:41:02]  Apretar 2 en el bote para empezar
+[15:41:02] ════════════════════════════════════════
+[15:41:02] Script[gamemodes/coastguard_test.amx]: Run time error 20: "Invalid index parameter (bad entry point)"
+[15:41:02] Number of vehicle models: 1
+[15:42:52] [connection] incoming connection: 127.0.0.1:52505 id: 0
+[15:42:52] [join] Holas has joined the server (0:127.0.0.1)
+[15:42:55] [LOGIN] Email recibido: mquintana1959@outlook.es
+[15:42:57] [LOGIN] Password recibido (len=16)
+[15:42:59] [LOGIN] Personaje seleccionado: slot 0
+[15:43:02] [LOGIN] Jugador 0 login completo — spawning
+[15:44:30] [chat] [Holas]: asd
+[15:45:00] [chat] [Holas]: asd
+[15:45:07] [part] Holas has left the server (0:1)
+[15:51:27] [connection] incoming connection: 127.0.0.1:58504 id: 0
+[15:51:27] [join] Holas has joined the server (0:127.0.0.1)
+[15:51:30] [LOGIN] Email recibido: mquintana1959@outlook.es
+[15:51:32] [LOGIN] Password recibido (len=16)
+[15:51:34] [LOGIN] Personaje seleccionado: slot 0
+[15:51:36] [LOGIN] Jugador 0 login completo — spawning
+[15:52:14] [part] Holas has left the server (0:1)
+[15:53:12] [connection] incoming connection: 127.0.0.1:53126 id: 0
+[15:53:12] [join] Holas has joined the server (0:127.0.0.1)
+[15:53:15] [LOGIN] Email recibido: mquintana1959@outlook.es
+[15:53:17] [LOGIN] Password recibido (len=16)
+[15:53:19] [LOGIN] Personaje seleccionado: slot 0
+[15:53:21] [LOGIN] Jugador 0 login completo — spawning
+[15:55:20] [part] Holas has left the server (0:0)
+
+----------
+Loaded log file: "server_log.txt".
+----------
+
+SA-MP Dedicated Server
+----------------------
+v0.3.DL-R1, (C)2005-2018 SA-MP Team
+
+[15:59:13] filterscripts = ""  (string)
+[15:59:13] 
+[15:59:13] Server Plugins
+[15:59:13] --------------
+[15:59:13]  Loaded 0 plugins.
+
+[15:59:13] 
+[15:59:13] Filterscripts
+[15:59:13] ---------------
+[15:59:13]   Loaded 0 filterscripts.
+
+[15:59:13] [COASTGUARD] Bote creado ID=1 modelo=472
+[15:59:13] ════════════════════════════════════════
+[15:59:13]  Coastguard Test Server - Listo!
+[15:59:13]  Bote en: 719.12, -1698.42, 1.78
+[15:59:13]  52 checkpoints EXACTOS del servidor real
+[15:59:13]  Apretar 2 en el bote para empezar
+[15:59:13] ════════════════════════════════════════
+[15:59:13] Script[gamemodes/coastguard_test.amx]: Run time error 20: "Invalid index parameter (bad entry point)"
+[15:59:13] Number of vehicle models: 1
+[15:59:34] [connection] incoming connection: 127.0.0.1:60078 id: 0
+[15:59:34] [join] Holas has joined the server (0:127.0.0.1)
+[15:59:37] [LOGIN] Email recibido: mquintana1959@outlook.es
+[15:59:39] [LOGIN] Password recibido (len=16)
+[15:59:41] [LOGIN] Personaje seleccionado: slot 0
+[15:59:43] [LOGIN] Jugador 0 login completo — spawning
+[16:00:23] [part] Holas has left the server (0:0)
+[16:00:45] [connection] incoming connection: 127.0.0.1:58790 id: 0
+[16:00:45] [join] Holas has joined the server (0:127.0.0.1)
+[16:00:47] [LOGIN] Email recibido: mquintana1959@outlook.es
+[16:00:49] [LOGIN] Password recibido (len=16)
+[16:00:51] [LOGIN] Personaje seleccionado: slot 0
+[16:00:53] [LOGIN] Jugador 0 login completo — spawning

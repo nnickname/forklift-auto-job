@@ -31,6 +31,7 @@ set(SAMPAPI_SOURCES
     ${SAMPAPI_DL}/CVehiclePool.cpp
     ${SAMPAPI_DL}/CLocalPlayer.cpp
     ${SAMPAPI_DL}/CPlayerPool.cpp
+    ${SAMPAPI_DL}/CDialog.cpp
 )
 
 # ── Our source files ──
@@ -43,6 +44,7 @@ set(HEADERS
     src/samp.h
     src/game.h
     src/coastguard.h
+    src/autologin.h
 )
 
 # Build as shared library (DLL -> ASI)
