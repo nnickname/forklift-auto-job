@@ -1,35 +1,46 @@
 @echo off
 title Coastguard Control Panel
 color 0A
+set "CFGFILE=%~dp0coastguard_config.txt"
+
+REM ── Load saved config ──
+set SAVED_STOP_HOUR=08
+set SAVED_STOP_MIN=00
+if exist "%CFGFILE%" (
+    for /f "tokens=1,2 delims==" %%a in (%CFGFILE%) do (
+        if "%%a"=="STOP_HOUR" set SAVED_STOP_HOUR=%%b
+        if "%%a"=="STOP_MIN" set SAVED_STOP_MIN=%%b
+    )
+)
 
 :MENU
 cls
 echo.
-echo  ╔═══════════════════════════════════════════════╗
-echo  ║       COASTGUARD CONTROL PANEL                ║
-echo  ╠═══════════════════════════════════════════════╣
-echo  ║                                               ║
-echo  ║   [1] Ver estado de la tarea programada       ║
-echo  ║   [2] Ejecutar AHORA (lanzar SA-MP)           ║
-echo  ║   [3] Cambiar horario (hora inicio)           ║
-echo  ║   [4] Activar / Desactivar tarea              ║
-echo  ║   [5] Matar GTA + SA-MP ahora                 ║
-echo  ║   [6] Ver log del mod                          ║
-echo  ║   [7] Recrear tarea (04:10 AM default)        ║
-echo  ║   [0] Salir                                    ║
-echo  ║                                               ║
-echo  ╚═══════════════════════════════════════════════╝
+echo  ╔══════════════════════════════════════════════════════╗
+echo  ║          COASTGUARD CONTROL PANEL                    ║
+echo  ╠══════════════════════════════════════════════════════╣
+echo  ║                                                      ║
+echo  ║   [1] Ver estado de la tarea                         ║
+echo  ║   [2] Ejecutar AHORA (lanzar SA-MP)                  ║
+echo  ║   [3] Programar horario (inicio + fin)               ║
+echo  ║   [4] Activar / Desactivar tarea                     ║
+echo  ║   [5] Matar GTA + SA-MP ahora                        ║
+echo  ║   [6] Ver log del mod                                 ║
+echo  ║   [0] Salir                                           ║
+echo  ║                                                      ║
+echo  ╠══════════════════════════════════════════════════════╣
+echo  ║   Auto-stop guardado: %SAVED_STOP_HOUR%:%SAVED_STOP_MIN%                          ║
+echo  ╚══════════════════════════════════════════════════════╝
 echo.
 
-set /p OPT=Elegi una opcion: 
+set /p OPT="  Elegi una opcion: "
 
 if "%OPT%"=="1" goto STATUS
 if "%OPT%"=="2" goto RUN_NOW
-if "%OPT%"=="3" goto CHANGE_TIME
+if "%OPT%"=="3" goto SCHEDULE
 if "%OPT%"=="4" goto TOGGLE
 if "%OPT%"=="5" goto KILL
 if "%OPT%"=="6" goto LOG
-if "%OPT%"=="7" goto RECREATE
 if "%OPT%"=="0" goto EXIT
 goto MENU
 
@@ -39,7 +50,9 @@ cls
 echo.
 echo  ── Estado de la tarea "CoastguardLauncher" ──
 echo.
-schtasks /Query /TN "CoastguardLauncher" /V /FO LIST 2>nul || echo  [!] La tarea no existe. Usa opcion 7 para crearla.
+schtasks /Query /TN "CoastguardLauncher" /V /FO LIST 2>nul || echo  [!] La tarea no existe. Usa opcion 3 para crearla.
+echo.
+echo  Auto-stop guardado: %SAVED_STOP_HOUR%:%SAVED_STOP_MIN%
 echo.
 pause
 goto MENU
@@ -50,25 +63,59 @@ cls
 echo.
 echo  Lanzando SA-MP ahora...
 start "" "%~dp0launch_coastguard.bat"
-echo  [OK] Lanzado.
+echo  [OK] Lanzado. Se cerrara automaticamente a las %SAVED_STOP_HOUR%:%SAVED_STOP_MIN%.
 echo.
 pause
 goto MENU
 
 REM ═══════════════════════════════════════════════
-:CHANGE_TIME
+:SCHEDULE
 cls
 echo.
-echo  Hora actual de la tarea:
-schtasks /Query /TN "CoastguardLauncher" /V /FO LIST 2>nul | findstr /i "Hora de inicio"
+echo  ╔══════════════════════════════════════════════════════╗
+echo  ║            PROGRAMAR HORARIO                         ║
+echo  ╠══════════════════════════════════════════════════════╣
+echo  ║                                                      ║
+echo  ║   Formato: HH:MM  (24 horas)                        ║
+echo  ║                                                      ║
+echo  ║   Ejemplos:                                          ║
+echo  ║     04:10  = 4:10 AM                                 ║
+echo  ║     16:30  = 4:30 PM                                 ║
+echo  ║     22:00  = 10:00 PM                                ║
+echo  ║     08:00  = 8:00 AM                                 ║
+echo  ║                                                      ║
+echo  ╚══════════════════════════════════════════════════════╝
 echo.
-set /p NEWTIME=Nueva hora (formato HH:MM, ej: 04:10): 
+echo  Auto-stop actual: %SAVED_STOP_HOUR%:%SAVED_STOP_MIN%
 echo.
-echo  Actualizando a %NEWTIME%...
+
+set /p START_TIME="  Hora de INICIO (ej: 04:10): "
+echo.
+set /p STOP_TIME="  Hora de FIN / auto-kill (ej: 08:00): "
+echo.
+
+REM ── Parse stop time into HOUR and MIN ──
+for /f "tokens=1,2 delims=:" %%a in ("%STOP_TIME%") do (
+    set SAVED_STOP_HOUR=%%a
+    set SAVED_STOP_MIN=%%b
+)
+
+REM ── Save config ──
+echo STOP_HOUR=%SAVED_STOP_HOUR%> "%CFGFILE%"
+echo STOP_MIN=%SAVED_STOP_MIN%>> "%CFGFILE%"
+
+REM ── Create/update scheduled task ──
+echo  Configurando tarea...
 schtasks /Delete /TN "CoastguardLauncher" /F >nul 2>&1
-schtasks /Create /TN "CoastguardLauncher" /TR "\"%~dp0launch_coastguard.bat\"" /SC DAILY /ST %NEWTIME% /RL HIGHEST /F
+schtasks /Create /TN "CoastguardLauncher" /TR "\"%~dp0launch_coastguard.bat\"" /SC DAILY /ST %START_TIME% /RL HIGHEST /F
+
 echo.
-echo  [OK] Tarea actualizada a las %NEWTIME% diariamente.
+echo  ╔══════════════════════════════════════════════════════╗
+echo  ║   [OK] Tarea programada!                             ║
+echo  ║                                                      ║
+echo  ║   Inicio:   %START_TIME%  (todos los dias)                  ║
+echo  ║   Fin:      %STOP_TIME%  (auto-kill GTA)                   ║
+echo  ╚══════════════════════════════════════════════════════╝
 echo.
 pause
 goto MENU
@@ -83,7 +130,7 @@ echo.
 echo  [1] Activar (Enable)
 echo  [2] Desactivar (Disable)
 echo.
-set /p TOPT=Opcion: 
+set /p TOPT="  Opcion: "
 if "%TOPT%"=="1" (
     schtasks /Change /TN "CoastguardLauncher" /ENABLE
     echo  [OK] Tarea ACTIVADA.
@@ -124,23 +171,6 @@ if exist "%LOGPATH%" (
         echo  Encontrado: %%f
     )
 )
-echo.
-pause
-goto MENU
-
-REM ═══════════════════════════════════════════════
-:RECREATE
-cls
-echo.
-echo  Recreando tarea "CoastguardLauncher"...
-echo  Horario: Diario a las 04:10 AM
-echo.
-schtasks /Delete /TN "CoastguardLauncher" /F >nul 2>&1
-schtasks /Create /TN "CoastguardLauncher" /TR "\"%~dp0launch_coastguard.bat\"" /SC DAILY /ST 04:10 /RL HIGHEST /F
-echo.
-schtasks /Query /TN "CoastguardLauncher" /V /FO LIST | findstr /i "Hora Nombre Estado Tipo"
-echo.
-echo  [OK] Tarea creada.
 echo.
 pause
 goto MENU

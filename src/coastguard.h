@@ -31,7 +31,7 @@ namespace Coastguard {
         RESTARTING
     };
 
-    static constexpr WORD  BOAT_SAMP_ID = 1;
+    static constexpr WORD  BOAT_SAMP_ID = 40;
     static constexpr float BOAT_X       = 719.1288f;
     static constexpr float BOAT_Y       = -1698.4248f;
     static constexpr float BOAT_Z       = 1.7874f;

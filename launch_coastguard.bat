@@ -3,10 +3,10 @@ REM ═════════════════════════�
 REM  Coastguard Auto-Launcher
 REM  Launches SA-MP, connects to server.
 REM  The .asi mod handles: auto-login + coastguard route.
-REM  Auto-kills GTA at STOP_HOUR (default 08:00).
+REM  Reads STOP_HOUR from coastguard_config.txt
 REM
 REM  Usage: launch_coastguard.bat
-REM  Schedule: Task Scheduler → daily at 04:10
+REM  Schedule: via coastguard_control.bat
 REM ═══════════════════════════════════════════════════════
 
 set SAMP_DIR=C:\Users\barto\Desktop\games\installergta
@@ -14,13 +14,23 @@ set SERVER_IP=play.sarp.es
 set SERVER_PORT=7777
 set PLAYER_NAME=Xylos
 set STOP_HOUR=08
+set STOP_MIN=00
+
+REM ── Read config file if exists ──
+set "CFGFILE=%~dp0coastguard_config.txt"
+if exist "%CFGFILE%" (
+    for /f "tokens=1,2 delims==" %%a in (%CFGFILE%) do (
+        if "%%a"=="STOP_HOUR" set STOP_HOUR=%%b
+        if "%%a"=="STOP_MIN" set STOP_MIN=%%b
+    )
+)
 
 echo ═══════════════════════════════════════════════
 echo   COASTGUARD AUTO-LAUNCHER
 echo   [%date% %time%]
 echo   Server: %SERVER_IP%:%SERVER_PORT%
 echo   Player: %PLAYER_NAME%
-echo   Auto-stop: %STOP_HOUR%:00
+echo   Auto-stop: %STOP_HOUR%:%STOP_MIN%
 echo ═══════════════════════════════════════════════
 
 REM Copy latest .asi to GTA directory
@@ -29,18 +39,25 @@ copy /Y "C:\Users\barto\Desktop\samp-forklift-mod\build\Release\samp-forklift-mo
 REM Launch SA-MP
 cd /d "%SAMP_DIR%"
 start "" "samp.exe" %SERVER_IP%:%SERVER_PORT%
-echo [%time%] SA-MP launched. Waiting until %STOP_HOUR%:00 to auto-kill...
+echo [%time%] SA-MP launched. Auto-kill at %STOP_HOUR%:%STOP_MIN%
 
 REM ── Wait loop: check every 60s if it's time to stop ──
 :WAIT_LOOP
 timeout /t 60 /nobreak >nul
-for /f "tokens=1 delims=:" %%h in ("%time: =0%") do set CURHOUR=%%h
-if %CURHOUR% GEQ %STOP_HOUR% goto STOP_GAME
+for /f "tokens=1,2 delims=:." %%h in ("%time: =0%") do (
+    set CURHOUR=%%h
+    set CURMIN=%%i
+)
+REM Compare HHMM as number
+set /a CURVAL=%CURHOUR%*60+%CURMIN%
+set /a STOPVAL=%STOP_HOUR%*60+%STOP_MIN%
+if %CURVAL% GEQ %STOPVAL% goto STOP_GAME
 goto WAIT_LOOP
 
 :STOP_GAME
-echo [%time%] Stop hour reached — killing GTA...
+echo [%time%] Stop time reached (%STOP_HOUR%:%STOP_MIN%) — killing GTA...
 taskkill /F /IM gta_sa.exe >nul 2>&1
 taskkill /F /IM samp.exe >nul 2>&1
 echo [%time%] Done. Exiting.
+exit /b 0
 exit /b 0
