@@ -127,22 +127,44 @@ namespace AutoLogin {
         SendInput(2, inputs, sizeof(INPUT));
     }
 
-    // Respond to a dialog: set input text (if needed) + close
+    // Respond to a dialog: type text via SendInput (like a human) + press Enter/Escape
+    // This is safer than writing to the editbox buffer because SA-MP processes
+    // each keystroke normally, including special characters in passwords.
     static bool RespondToDialog(int dialogType, const char* inputText, bool useCancel = false) {
-        if (dialogType == 1 || dialogType == 3) {
-            // DIALOG_INPUT (1) or DIALOG_PASSWORD (3) — need to set text
-            bool textSet = SAMP::SetDialogInputText(inputText);
-            if (textSet) {
-                Game::Log("[LOGIN] Editbox text set OK");
-            } else {
-                // Fallback: type via SendInput
-                Game::Log("[LOGIN] Editbox write failed — using SendInput");
-                TypeText(inputText);
-                Sleep(100);
-            }
+        if ((dialogType == 1 || dialogType == 3) && inputText && inputText[0]) {
+            // INPUT or PASSWORD — clear existing text first, then type
+            // Select All (Ctrl+A) then Delete to clear
+            INPUT ctrlA[4] = {};
+            ctrlA[0].type = INPUT_KEYBOARD; ctrlA[0].ki.wVk = VK_CONTROL;
+            ctrlA[1].type = INPUT_KEYBOARD; ctrlA[1].ki.wVk = 'A';
+            ctrlA[2].type = INPUT_KEYBOARD; ctrlA[2].ki.wVk = 'A'; ctrlA[2].ki.dwFlags = KEYEVENTF_KEYUP;
+            ctrlA[3].type = INPUT_KEYBOARD; ctrlA[3].ki.wVk = VK_CONTROL; ctrlA[3].ki.dwFlags = KEYEVENTF_KEYUP;
+            SendInput(4, ctrlA, sizeof(INPUT));
+            Sleep(50);
+            INPUT del[2] = {};
+            del[0].type = INPUT_KEYBOARD; del[0].ki.wVk = VK_DELETE;
+            del[1].type = INPUT_KEYBOARD; del[1].ki.wVk = VK_DELETE; del[1].ki.dwFlags = KEYEVENTF_KEYUP;
+            SendInput(2, del, sizeof(INPUT));
+            Sleep(50);
+
+            // Type the text character by character (Unicode)
+            TypeText(inputText);
+            Sleep(200);
+            Game::Log("[LOGIN] Typed %d chars via SendInput", (int)strlen(inputText));
         }
-        // Close: 1=Accept (left button), 0=Cancel (right button)
-        return SAMP::CloseDialog(useCancel ? 0 : 1);
+
+        // Press Enter (Accept) or Escape (Cancel)
+        if (useCancel) {
+            INPUT esc[2] = {};
+            esc[0].type = INPUT_KEYBOARD; esc[0].ki.wVk = VK_ESCAPE;
+            esc[1].type = INPUT_KEYBOARD; esc[1].ki.wVk = VK_ESCAPE; esc[1].ki.dwFlags = KEYEVENTF_KEYUP;
+            SendInput(2, esc, sizeof(INPUT));
+            Game::Log("[LOGIN] Pressed ESC (Cancel)");
+        } else {
+            PressEnter();
+            Game::Log("[LOGIN] Pressed ENTER (Accept)");
+        }
+        return true;
     }
 
     // ════════════════════════════════════════════════════════

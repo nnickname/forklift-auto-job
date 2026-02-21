@@ -13,16 +13,20 @@ set SAMP_DIR=C:\Users\barto\Desktop\games\installergta
 set SERVER_IP=play.sarp.es
 set SERVER_PORT=7777
 set PLAYER_NAME=Xylos
-set STOP_HOUR=08
-set STOP_MIN=00
+set STOP_TIME=08:00
 
 REM ── Read config file if exists ──
 set "CFGFILE=%~dp0coastguard_config.txt"
 if exist "%CFGFILE%" (
     for /f "tokens=1,2 delims==" %%a in (%CFGFILE%) do (
-        if "%%a"=="STOP_HOUR" set STOP_HOUR=%%b
-        if "%%a"=="STOP_MIN" set STOP_MIN=%%b
+        if "%%a"=="STOP_TIME" set STOP_TIME=%%b
     )
+)
+
+REM ── Parse stop time ──
+for /f "tokens=1,2 delims=:" %%a in ("%STOP_TIME%") do (
+    set STOP_HOUR=%%a
+    set STOP_MIN=%%b
 )
 
 echo ═══════════════════════════════════════════════

@@ -3,13 +3,13 @@ title Coastguard Control Panel
 color 0A
 set "CFGFILE=%~dp0coastguard_config.txt"
 
-REM ── Load saved config ──
-set SAVED_STOP_HOUR=08
-set SAVED_STOP_MIN=00
+REM ── Load saved config (defaults) ──
+set SAVED_START=04:10
+set SAVED_STOP=08:00
 if exist "%CFGFILE%" (
     for /f "tokens=1,2 delims==" %%a in (%CFGFILE%) do (
-        if "%%a"=="STOP_HOUR" set SAVED_STOP_HOUR=%%b
-        if "%%a"=="STOP_MIN" set SAVED_STOP_MIN=%%b
+        if "%%a"=="START_TIME" set SAVED_START=%%b
+        if "%%a"=="STOP_TIME" set SAVED_STOP=%%b
     )
 )
 
@@ -29,7 +29,7 @@ echo  ║   [6] Ver log del mod                                 ║
 echo  ║   [0] Salir                                           ║
 echo  ║                                                      ║
 echo  ╠══════════════════════════════════════════════════════╣
-echo  ║   Auto-stop guardado: %SAVED_STOP_HOUR%:%SAVED_STOP_MIN%                          ║
+echo  ║   Inicio: %SAVED_START%    Fin: %SAVED_STOP%                       ║
 echo  ╚══════════════════════════════════════════════════════╝
 echo.
 
@@ -48,11 +48,22 @@ REM ═════════════════════════�
 :STATUS
 cls
 echo.
-echo  ── Estado de la tarea "CoastguardLauncher" ──
+echo  ╔══════════════════════════════════════════════════════╗
+echo  ║          ESTADO DEL COASTGUARD                       ║
+echo  ╠══════════════════════════════════════════════════════╣
+echo  ║                                                      ║
+echo  ║   Hora de INICIO:  %SAVED_START%  (Task Scheduler)            ║
+echo  ║   Hora de FIN:     %SAVED_STOP%  (auto-kill GTA)              ║
+echo  ║                                                      ║
+echo  ╚══════════════════════════════════════════════════════╝
 echo.
-schtasks /Query /TN "CoastguardLauncher" /V /FO LIST 2>nul || echo  [!] La tarea no existe. Usa opcion 3 para crearla.
+echo  ── Tarea de Windows ──
+for /f "tokens=*" %%L in ('schtasks /Query /TN "CoastguardLauncher" /FO LIST 2^>nul ^| findstr /i "Estado Hora Nombre tarea"') do echo  %%L
+schtasks /Query /TN "CoastguardLauncher" >nul 2>&1 || echo  [!] La tarea NO existe. Usa opcion 3 para crearla.
 echo.
-echo  Auto-stop guardado: %SAVED_STOP_HOUR%:%SAVED_STOP_MIN%
+echo  (La "Fecha final" de Windows siempre dice N/A
+echo   porque la tarea se repite para siempre.
+echo   La hora de FIN la controla nuestro launcher.)
 echo.
 pause
 goto MENU
@@ -63,7 +74,7 @@ cls
 echo.
 echo  Lanzando SA-MP ahora...
 start "" "%~dp0launch_coastguard.bat"
-echo  [OK] Lanzado. Se cerrara automaticamente a las %SAVED_STOP_HOUR%:%SAVED_STOP_MIN%.
+echo  [OK] Lanzado. Se cerrara automaticamente a las %SAVED_STOP%.
 echo.
 pause
 goto MENU
@@ -86,7 +97,7 @@ echo  ║     08:00  = 8:00 AM                                 ║
 echo  ║                                                      ║
 echo  ╚══════════════════════════════════════════════════════╝
 echo.
-echo  Auto-stop actual: %SAVED_STOP_HOUR%:%SAVED_STOP_MIN%
+echo  Horario actual:  Inicio: %SAVED_START%   Fin: %SAVED_STOP%
 echo.
 
 set /p START_TIME="  Hora de INICIO (ej: 04:10): "
@@ -94,15 +105,13 @@ echo.
 set /p STOP_TIME="  Hora de FIN / auto-kill (ej: 08:00): "
 echo.
 
-REM ── Parse stop time into HOUR and MIN ──
-for /f "tokens=1,2 delims=:" %%a in ("%STOP_TIME%") do (
-    set SAVED_STOP_HOUR=%%a
-    set SAVED_STOP_MIN=%%b
-)
+REM ── Update variables ──
+set SAVED_START=%START_TIME%
+set SAVED_STOP=%STOP_TIME%
 
 REM ── Save config ──
-echo STOP_HOUR=%SAVED_STOP_HOUR%> "%CFGFILE%"
-echo STOP_MIN=%SAVED_STOP_MIN%>> "%CFGFILE%"
+echo START_TIME=%SAVED_START%> "%CFGFILE%"
+echo STOP_TIME=%SAVED_STOP%>> "%CFGFILE%"
 
 REM ── Create/update scheduled task ──
 echo  Configurando tarea...
