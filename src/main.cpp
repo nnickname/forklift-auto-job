@@ -397,6 +397,36 @@ static DWORD WINAPI MainThread(LPVOID) {
             Game::Log("[MAIN] AutoLogin done — first admin check started");
         }
 
+        // ── Anti-AFK: send small movement every ~2 min to avoid kick ──
+        // Only needed when connected but NOT actively doing coastguard
+        // (coastguard movement already prevents AFK when running)
+        {
+            static DWORD s_LastAntiAFK = 0;
+            static const DWORD AFK_INTERVAL = 120000; // 2 minutes
+            if (sampOK && AutoLogin::IsDone() && !g_ModActive) {
+                if (now - s_LastAntiAFK >= AFK_INTERVAL) {
+                    s_LastAntiAFK = now;
+                    __try {
+                        // Send a tiny onfoot sync with a random key press
+                        auto* lp = SAMP::GetLocalPlayer();
+                        if (lp) {
+                            // Toggle sprint key briefly in onfoot data
+                            lp->m_onfootData.m_controllerState.m_bPedWalk = 1;
+                            lp->SendOnfootData();
+                            Sleep(100);
+                            lp->m_onfootData.m_controllerState.m_bPedWalk = 0;
+                            lp->SendOnfootData();
+                            Game::Log("[AFK] Anti-AFK pulse sent");
+                        }
+                    } __except (EXCEPTION_EXECUTE_HANDLER) {
+                        Game::Log("[AFK] Exception in anti-AFK");
+                    }
+                }
+            } else {
+                s_LastAntiAFK = now; // reset timer while mod is active
+            }
+        }
+
         // ── Coastguard logic (always tick — every state handles its own guards) ──
         if (g_ModActive && sampOK) {
             __try {
